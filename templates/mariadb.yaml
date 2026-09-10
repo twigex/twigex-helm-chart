@@ -1,0 +1,89 @@
+{{/* Embedded MariaDB. Renders when mariadb.mode == "embedded".
+
+When mariadb.externalSecret=true, the chart-managed Secret <release>-mariadb
+is skipped (see templates/mariadb-secret.yaml); the Deployment reads
+creds from mariadb.existingSecret.name in that case.
+*/}}
+{{- if eq .Values.mariadb.mode "embedded" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mariadb-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-mariadb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-mariadb
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-mariadb
+    spec:
+      containers:
+      - name: mariadb
+        image: "{{ .Values.mariadb.image.repository }}:{{ .Values.mariadb.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.mariadb.image.pullPolicy }}
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mariadb
+              key: mariadb-root-password
+        - name: MARIADB_DATABASE
+          value: {{ .Values.twigex.db.name | quote }}
+        - name: MARIADB_USER
+          value: {{ .Values.twigex.db.user | quote }}
+        - name: MARIADB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mariadb
+              key: mariadb-password
+        resources:
+          {{- toYaml .Values.twigex.resources | nindent 10 }}
+        volumeMounts:
+        - name: {{ .Release.Name }}-mariadb-data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: {{ .Release.Name }}-mariadb-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-mariadb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-mariadb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-mariadb
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: {{ .Release.Name }}-mariadb
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-mariadb-pvc
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mariadb.persistence.size | quote }}
+  {{- if .Values.mariadb.persistence.storageClass }}
+  storageClassName: {{ .Values.mariadb.persistence.storageClass | quote }}
+  {{- end }}
+{{- end -}}

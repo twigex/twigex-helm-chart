@@ -1,0 +1,174 @@
+{{- if .Values.cube.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-cube-config
+  namespace: {{ .Release.Namespace }}
+data:
+  cube.js: |-
+    // Cube.js configuration for the shared, multi-tenant analytics backend.
+    //
+    // A single Cube.js deployment serves every workspace. It holds no
+    // per-workspace files or database credentials of its own — instead it resolves
+    // everything at query time by calling back into twigex's internal Cube API,
+    // keyed on the workspaceId carried in the JWT that twigex signs and sends.
+    //
+    // Required environment variables:
+    //   CUBEJS_API_SECRET     shared secret that verifies the JWT from twigex.
+    //   COSPACE_INTERNAL_URL  base URL of twigex's internal Cube API.
+    //   CUBE_CALLBACK_SECRET  shared secret sent back to twigex on every callback.
+
+    const COSPACE_URL = process.env.COSPACE_INTERNAL_URL;
+    const CALLBACK_SECRET = process.env.CUBE_CALLBACK_SECRET;
+
+    const DEBUG = process.env.CUBEJS_DEV_MODE === 'true';
+
+    function debug(...args) {
+      if (DEBUG) console.log('[cube:debug]', new Date().toISOString(), ...args);
+    }
+
+    function logError(scope, err, context) {
+      console.error(`[cube:error] ${scope}`);
+      if (context && Object.keys(context).length) {
+        console.error('  context:', JSON.stringify(context));
+      }
+      console.error('  ', err && err.stack ? err.stack : String(err));
+    }
+
+    if (!COSPACE_URL) console.warn('[cube:warn] COSPACE_INTERNAL_URL is not set');
+    if (!CALLBACK_SECRET) console.warn('[cube:warn] CUBE_CALLBACK_SECRET is not set');
+
+    async function callCospace(pathname, params) {
+      const url = new URL(COSPACE_URL + pathname);
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, value);
+        }
+      }
+
+      debug(`→ GET ${url.pathname}${url.search}`);
+      const started = Date.now();
+
+      let res;
+      try {
+        res = await fetch(url, {
+          headers: { 'X-Cube-Callback-Secret': CALLBACK_SECRET },
+        });
+      } catch (err) {
+        logError(`callCospace ${pathname} (network)`, err, { url: url.toString() });
+        throw err;
+      }
+
+      const ms = Date.now() - started;
+
+      if (!res.ok) {
+        let body = '';
+        try {
+          body = await res.text();
+        } catch (_) {
+          body = '<unreadable response body>';
+        }
+        const err = new Error(`twigex ${pathname} responded ${res.status}`);
+        logError(`callCospace ${pathname}`, err, {
+          status: res.status,
+          ms,
+          body: body.slice(0, 1000),
+        });
+        throw err;
+      }
+
+      let json;
+      try {
+        json = await res.json();
+      } catch (err) {
+        logError(`callCospace ${pathname} (invalid JSON)`, err, { status: res.status, ms });
+        throw err;
+      }
+
+      debug(`← ${res.status} ${pathname} (${ms}ms)`);
+      return json;
+    }
+
+    module.exports = {
+      contextToAppId: ({ securityContext }) => {
+        const id = `ws_${securityContext.workspaceId}`;
+        debug('contextToAppId', { workspaceId: securityContext.workspaceId, appId: id });
+        return id;
+      },
+
+      contextToOrchestratorId: ({ securityContext }) => {
+        const id = `ws_${securityContext.workspaceId}_c${securityContext.connVersion}`;
+        debug('contextToOrchestratorId', {
+          workspaceId: securityContext.workspaceId,
+          connVersion: securityContext.connVersion,
+          orchestratorId: id,
+        });
+        return id;
+      },
+
+      repositoryFactory: ({ securityContext }) => ({
+        dataSchemaFiles: async () => {
+          const workspaceId = securityContext.workspaceId;
+          debug('dataSchemaFiles: fetching schema', { workspaceId });
+          try {
+            const files = await callCospace('/schema', { workspace: workspaceId });
+            debug('dataSchemaFiles: received', {
+              workspaceId,
+              count: files.length,
+              fileNames: files.map((f) => f.fileName),
+            });
+            return files.map((f) => ({ fileName: f.fileName, content: f.content }));
+          } catch (err) {
+            logError('dataSchemaFiles', err, { workspaceId });
+            throw err;
+          }
+        },
+      }),
+
+      schemaVersion: async ({ securityContext }) => {
+        const workspaceId = securityContext.workspaceId;
+        try {
+          const { version } = await callCospace('/schema-version', { workspace: workspaceId });
+          debug('schemaVersion', { workspaceId, version: String(version) });
+          return String(version);
+        } catch (err) {
+          logError('schemaVersion', err, { workspaceId });
+          throw err;
+        }
+      },
+
+      driverFactory: async ({ securityContext, dataSource }) => {
+        const workspaceId = securityContext.workspaceId;
+        debug('driverFactory: resolving connection', { workspaceId, dataSource });
+        try {
+          const conn = await callCospace('/connection', {
+            workspace: workspaceId,
+            dataSource,
+          });
+
+          debug('driverFactory: resolved', {
+            workspaceId,
+            dataSource,
+            type: conn.type,
+            host: conn.host,
+            port: conn.port,
+            database: conn.database,
+            user: conn.user,
+            password: conn.password ? '<redacted>' : '<empty>',
+          });
+
+          return {
+            type: conn.type,
+            host: conn.host,
+            port: conn.port,
+            database: conn.database,
+            user: conn.user,
+            password: conn.password,
+          };
+        } catch (err) {
+          logError('driverFactory', err, { workspaceId, dataSource });
+          throw err;
+        }
+      },
+    };
+{{- end }}

@@ -1,0 +1,41 @@
+{{- if and .Values.cube.enabled .Values.cube.pdb.enabled }}
+{{- /* PDBs for cube-api and the cubestore components. */ -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-cube-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.cube.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-cube-router
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-router
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-cube-worker-1
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-worker-1
+{{- end -}}

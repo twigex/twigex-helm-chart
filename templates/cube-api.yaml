@@ -1,0 +1,78 @@
+{{- if .Values.cube.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-cube-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-api
+    app.kubernetes.io/component: cube-api
+spec:
+  replicas: {{ .Values.cube.api.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-api
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-cube-api
+        app.kubernetes.io/component: cube-api
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cube-config.yaml") . | sha256sum }}
+    spec:
+      containers:
+        - name: cube-api
+          image: "{{ .Values.cube.image.api.repository }}:{{ .Values.cube.image.api.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.cube.image.api.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "cube.fullSecretName" . }}
+          env:
+            - name: CUBEJS_CUBESTORE_HOST
+              value: {{ .Release.Name }}-cube-router
+            - name: CUBEJS_DEV_MODE
+              value: {{ .Values.cube.devMode | quote }}
+            - name: COSPACE_INTERNAL_URL
+              value: {{ if .Values.cube.internalUrl }}{{ .Values.cube.internalUrl | quote }}{{ else }}{{ printf "http://%s:%d/api/internal/cube" .Release.Name (int .Values.twigex.service.port) | quote }}{{ end }}
+          ports:
+            - containerPort: 4000
+          readinessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.cube.api.resources | nindent 12 }}
+          volumeMounts:
+            - name: cube-config
+              mountPath: /cube/conf/cube.js
+              subPath: cube.js
+              readOnly: true
+      volumes:
+        - name: cube-config
+          configMap:
+            name: {{ .Release.Name }}-cube-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-cube-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-api
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}-cube-api
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+{{- end -}}

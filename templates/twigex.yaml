@@ -1,0 +1,355 @@
+{{- include "twigex.validate" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-twigex
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.twigex.replicas }}
+  strategy:
+    type: {{ .Values.twigex.strategy }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-twigex
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-twigex
+        {{- with .Values.twigex.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.twigex.pod.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.twigex.serviceAccount.create }}
+      serviceAccountName: {{ .Values.twigex.serviceAccount.name | default (printf "%s-twigex" .Release.Name) | quote }}
+      {{- end }}
+      {{- with .Values.twigex.serviceAccount.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.twigex.pod.priorityClassName }}
+      priorityClassName: {{ .Values.twigex.pod.priorityClassName | quote }}
+      {{- end }}
+      {{- with .Values.twigex.pod.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.twigex.pod.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.twigex.pod.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.twigex.pod.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.twigex.pod.securityContext }}
+      securityContext:
+        {{- toYaml .Values.twigex.pod.securityContext | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.twigex.pod.terminationGracePeriodSeconds }}
+      containers:
+        - name: twigex
+          image: "{{ .Values.twigex.image.repository }}:{{ .Values.twigex.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.twigex.image.pullPolicy }}
+          {{- if .Values.twigex.pod.containerSecurityContext }}
+          securityContext:
+            {{- toYaml .Values.twigex.pod.containerSecurityContext | nindent 12 }}
+          {{- end }}
+          {{- if .Values.twigex.probes.enabled }}
+          livenessProbe:
+            tcpSocket: {port: {{ .Values.twigex.server.port }}}
+            initialDelaySeconds: {{ .Values.twigex.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.twigex.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.twigex.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.twigex.probes.liveness.failureThreshold }}
+          readinessProbe:
+            tcpSocket: {port: {{ .Values.twigex.server.port }}}
+            initialDelaySeconds: {{ .Values.twigex.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.twigex.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.twigex.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.twigex.probes.readiness.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.twigex.resources | nindent 12 }}
+          volumeMounts:
+            - name: shared-pvc
+              mountPath: /app/data
+            - name: shared-pvc
+              mountPath: /app/config
+          env:
+            - name: COSPACE_ADMIN_NAME
+              value: {{ .Values.twigex.admin.name | quote }}
+            - name: COSPACE_ADMIN_LASTNAME
+              value: {{ .Values.twigex.admin.lastName | quote }}
+            - name: COSPACE_ADMIN_USERNAME
+              value: {{ .Values.twigex.admin.username | quote }}
+            - name: COSPACE_ADMIN_EMAIL
+              value: {{ .Values.twigex.admin.email | quote }}
+            {{- if .Values.twigex.admin.enabled }}
+            - name: COSPACE_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_ADMIN_PASSWORD | quote }}
+            {{- end }}
+            - name: COSPACE_SERVER_SITE_URL
+              value: {{ printf "https://%s" .Values.domain | quote }}
+            - name: COSPACE_SERVER_PORT
+              value: {{ .Values.twigex.server.port | quote }}
+            - name: COSPACE_SERVER_DEFAULT_LOCALE
+              value: {{ .Values.twigex.server.defaultLocale | quote }}
+            - name: COSPACE_SERVER_SESSION_LENGTH_DAYS
+              value: {{ .Values.twigex.server.sessionLengthDays | quote }}
+            - name: COSPACE_SERVER_ENCRYPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_SERVER_ENCRYPT_KEY | quote }}
+            - name: COSPACE_SERVER_TLS_CERT_FILE
+              value: {{ .Values.twigex.server.tlsCertFile | quote }}
+            - name: COSPACE_SERVER_TLS_KEY_FILE
+              value: {{ .Values.twigex.server.tlsKeyFile | quote }}
+            - name: COSPACE_DB_HOST
+              value: {{ if eq .Values.mariadb.mode "external" }}{{ .Values.twigex.db.host | quote }}{{ else }}{{ printf "%s-mariadb" .Release.Name | quote }}{{ end }}
+            - name: COSPACE_DB_PORT
+              value: {{ .Values.twigex.db.port | quote }}
+            - name: COSPACE_DB_USER
+              value: {{ .Values.twigex.db.user | quote }}
+            - name: COSPACE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_DB_PASSWORD | quote }}
+            - name: COSPACE_DB_NAME
+              value: {{ .Values.twigex.db.name | quote }}
+            - name: COSPACE_DB_DRIVER
+              value: {{ .Values.twigex.db.driver | quote }}
+            - name: COSPACE_DB_READ_TIMEOUT
+              value: {{ .Values.twigex.db.readTimeout | quote }}
+            - name: COSPACE_DB_WRITE_TIMEOUT
+              value: {{ .Values.twigex.db.writeTimeout | quote }}
+            - name: COSPACE_DB_MAX_OPEN_CONNS
+              value: {{ .Values.twigex.db.maxOpenConns | quote }}
+            - name: COSPACE_DB_MAX_IDLE_CONNS
+              value: {{ .Values.twigex.db.maxIdleConns | quote }}
+            - name: COSPACE_DB_CONN_MAX_LIFETIME_MINUTES
+              value: {{ .Values.twigex.db.connMaxLifetimeMinutes | quote }}
+            - name: COSPACE_DB_CONN_MAX_IDLE_TIME_MINUTES
+              value: {{ .Values.twigex.db.connMaxIdleTimeMinutes | quote }}
+            - name: COSPACE_DB_QUERY_TIMEOUT
+              value: {{ .Values.twigex.db.queryTimeout | quote }}
+            - name: COSPACE_REDIS_ADDRESS
+              value: {{ printf "%s-redis-master:6379" .Release.Name | quote }}
+            - name: COSPACE_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_REDIS_PASSWORD | quote }}
+            - name: COSPACE_STORAGE_TYPE
+              value: {{ .Values.twigex.storage.type | quote }}
+            {{- if or (eq .Values.twigex.storage.type "s3") (eq .Values.twigex.storage.type "s3compat") }}
+            - name: COSPACE_STORAGE_NAME
+              value: {{ .Values.twigex.storage.s3.name | quote }}
+            - name: COSPACE_STORAGE_PATH
+              value: "/"
+            - name: COSPACE_STORAGE_ENDPOINT
+              value: {{ .Values.twigex.storage.s3.endpoint | quote }}
+            - name: COSPACE_STORAGE_BUCKET
+              value: {{ .Values.twigex.storage.s3.bucket | quote }}
+            - name: COSPACE_STORAGE_SSL
+              value: {{ .Values.twigex.storage.s3.ssl | quote }}
+            - name: COSPACE_STORAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_STORAGE_ACCESS_KEY | quote }}
+            - name: COSPACE_STORAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_STORAGE_SECRET_KEY | quote }}
+            {{- else }}
+            - name: COSPACE_STORAGE_NAME
+              value: {{ .Values.twigex.storage.local.name | quote }}
+            - name: COSPACE_STORAGE_PATH
+              value: {{ .Values.twigex.storage.local.path | quote }}
+            - name: COSPACE_STORAGE_ENDPOINT
+              value: ""
+            - name: COSPACE_STORAGE_ACCESS_KEY
+              value: ""
+            - name: COSPACE_STORAGE_SECRET_KEY
+              value: ""
+            - name: COSPACE_STORAGE_BUCKET
+              value: ""
+            - name: COSPACE_STORAGE_SSL
+              value: "false"
+            {{- end }}
+            {{- if .Values.twigex.smtp.host }}
+            - name: COSPACE_SMTP_HOST
+              value: {{ .Values.twigex.smtp.host | quote }}
+            - name: COSPACE_SMTP_PORT
+              value: {{ .Values.twigex.smtp.port | quote }}
+            - name: COSPACE_SMTP_USERNAME
+              value: {{ .Values.twigex.smtp.username | quote }}
+            - name: COSPACE_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_SMTP_PASSWORD | quote }}
+            - name: COSPACE_SMTP_SECURITY
+              value: {{ .Values.twigex.smtp.security | quote }}
+            - name: COSPACE_SMTP_AUTH_ENABLED
+              value: {{ .Values.twigex.smtp.authEnabled | quote }}
+            {{- end }}
+            {{- if .Values.twigex.office.host }}
+            - name: COSPACE_OFFICE_ENABLE
+              value: {{ .Values.twigex.office.enabled | quote }}
+            - name: COSPACE_OFFICE_TYPE
+              value: {{ .Values.twigex.office.type | quote }}
+            - name: COSPACE_OFFICE_HOST
+              value: {{ .Values.twigex.office.host | quote }}
+            - name: COSPACE_OFFICE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_OFFICE_SECRET | quote }}
+            {{- end }}
+            {{- if .Values.twigex.channel.host }}
+            - name: COSPACE_CHANNEL_ENABLED
+              value: {{ .Values.twigex.channel.enabled | quote }}
+            - name: COSPACE_CHANNEL_HOST
+              value: {{ .Values.twigex.channel.host | quote }}
+            - name: COSPACE_CHANNEL_KEY
+              value: {{ .Values.twigex.channel.key | quote }}
+            - name: COSPACE_CHANNEL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_CHANNEL_SECRET | quote }}
+            {{- end }}
+            {{- if .Values.twigex.channel.linkPreviews }}
+            - name: COSPACE_CHANNEL_LINK_PREVIEWS
+              value: {{ .Values.twigex.channel.linkPreviews | quote }}
+            {{- end }}
+            {{- if .Values.twigex.channel.gif.enabled }}
+            - name: COSPACE_CHANNEL_GIF_ENABLED
+              value: {{ .Values.twigex.channel.gif.enabled | quote }}
+            - name: COSPACE_CHANNEL_GIF_API_KEY
+              value: {{ .Values.twigex.channel.gif.apiKey | quote }}
+            - name: COSPACE_CHANNEL_GIF_CLIENT_KEY
+              value: {{ .Values.twigex.channel.gif.clientKey | quote }}
+            {{- end }}
+            - name: COSPACE_GITEA_ENABLED
+              value: {{ .Values.twigex.gitea.enabled | quote }}
+            - name: COSPACE_GITEA_CLIENT_ID
+              value: {{ .Values.twigex.gitea.clientID | quote }}
+            - name: COSPACE_GITEA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_GITEA_CLIENT_SECRET | quote }}
+            - name: COSPACE_GITEA_AUTH_ENDPOINT
+              value: {{ .Values.twigex.gitea.authEndpoint | quote }}
+            - name: COSPACE_GITEA_TOKEN_ENDPOINT
+              value: {{ .Values.twigex.gitea.tokenEndpoint | quote }}
+            - name: COSPACE_GITEA_USER_API_ENDPOINT
+              value: {{ .Values.twigex.gitea.userAPIEndpoint | quote }}
+            - name: COSPACE_GITEA_REDIRECT_URL
+              value: {{ .Values.twigex.gitea.redirectURL | quote }}
+            - name: COSPACE_GITEA_SCOPES
+              value: {{ .Values.twigex.gitea.scopes | quote }}
+            {{- if .Values.twigex.ldap.serverURL }}
+            - name: COSPACE_LDAP_ENABLED
+              value: {{ .Values.twigex.ldap.enabled | quote }}
+            - name: COSPACE_LDAP_SERVER_URL
+              value: {{ .Values.twigex.ldap.serverURL | quote }}
+            - name: COSPACE_LDAP_BASE_DN
+              value: {{ .Values.twigex.ldap.baseDN | quote }}
+            - name: COSPACE_LDAP_BIND_DN
+              value: {{ .Values.twigex.ldap.bindDN | quote }}
+            - name: COSPACE_LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "twigex.secretName" . | quote }}
+                  key: {{ .Values.twigex.existingSecret.keys.COSPACE_LDAP_BIND_PASSWORD | quote }}
+            - name: COSPACE_LDAP_INSECURE_SKIP_VERIFY
+              value: {{ .Values.twigex.ldap.insecureSkipVerify | quote }}
+            - name: COSPACE_LDAP_USER_FILTER
+              value: {{ .Values.twigex.ldap.userFilter | quote }}
+            - name: COSPACE_LDAP_USER_ID_ATTR
+              value: {{ .Values.twigex.ldap.userIDAttr | quote }}
+            - name: COSPACE_LDAP_FIRST_NAME_ATTR
+              value: {{ .Values.twigex.ldap.firstNameAttr | quote }}
+            - name: COSPACE_LDAP_LAST_NAME_ATTR
+              value: {{ .Values.twigex.ldap.lastNameAttr | quote }}
+            - name: COSPACE_LDAP_EMAIL_ATTR
+              value: {{ .Values.twigex.ldap.emailAttr | quote }}
+            - name: COSPACE_LDAP_ALLOWED_GROUPS
+              value: {{ .Values.twigex.ldap.allowedGroups | quote }}
+            {{- end }}
+            - name: COSPACE_LICENSE
+              value: {{ .Values.twigex.license | quote }}
+            {{- if .Values.cube.enabled }}
+            - name: COSPACE_COLLIMATO_CUBE_API_URL
+              value: {{ printf "http://%s-cube-api:%d" .Release.Name (int .Values.cube.api.service.port) | quote }}
+            - name: COSPACE_COLLIMATO_CUBE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cube.fullSecretName" . | quote }}
+                  key: {{ .Values.cube.existingSecret.keys.CUBEJS_API_SECRET | quote }}
+            - name: COSPACE_COLLIMATO_CUBE_CALLBACK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cube.fullSecretName" . | quote }}
+                  key: {{ .Values.cube.existingSecret.keys.CUBE_CALLBACK_SECRET | quote }}
+            {{- end }}
+            {{- range $k, $v := .Values.twigex.config }}
+            - name: COSPACE_{{ $k | upper | replace "-" "_" }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- range $k, $ref := .Values.twigex.configFromSecrets }}
+            - name: COSPACE_{{ $k | upper | replace "-" "_" }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ref.name | quote }}
+                  key: {{ $ref.key | quote }}
+            {{- end }}
+      volumes:
+        - name: shared-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-twigex-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+  {{- with .Values.twigex.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.twigex.service.type }}
+  {{- if and (eq .Values.twigex.service.type "NodePort") .Values.twigex.service.nodePort }}
+  nodePort: {{ .Values.twigex.service.nodePort | int }}
+  {{- end }}
+  {{- with .Values.twigex.service.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
+  {{- end }}
+  selector:
+    app: {{ .Release.Name }}-twigex
+  ports:
+    - name: http
+      port: {{ .Values.twigex.service.port | int }}
+      targetPort: {{ .Values.twigex.service.targetPort | int }}

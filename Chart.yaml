@@ -1,0 +1,53 @@
+apiVersion: v2
+name: twigex
+description: A Helm chart for deploying Twigex — the unified workspace for modern businesses.
+type: application
+version: 0.0.35
+appVersion: "v0.14.0-rc2"
+# Minimum k8s we test against. Bump when using APIs that require newer.
+kubeVersion: ">=1.24.0-0"
+keywords:
+  - file-sharing
+  - storage
+  - collaboration
+  - documents
+  - office
+  - collabora
+  - cubejs
+  - analytics
+  - realtime
+  - livekit
+  - webrtc
+  - media
+  - video
+  - chat
+  - dashboard
+  - data
+  - api
+  - backend
+  - cloud
+  - kubernetes
+  - helm
+home: https://twigex.com
+icon: https://twigex.com/icon.png
+sources:
+  - https://github.com/twigex/helm-charts
+maintainers:
+  - name: Twigex
+    url: https://twigex.com
+annotations:
+  artifacthub.io/license: "Apache-2.0"
+  artifacthub.io/displayName: "Twigex"
+  artifacthub.io/links: |
+    - name: OCI Registry
+      url: https://github.com/orgs/twigex/packages/container/package/twigex
+    - name: Documentation
+      url: https://twigex.com
+  artifacthub.io/changes: |
+    - kind: added
+      description: first-release
+dependencies:
+  - name: redis
+    version: 27.0.17
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

@@ -1,0 +1,29 @@
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Personal / local config (NOT to ship in OCI tarball)
+.kube/
+.secrets/
+.sops.yaml
+*.local.yaml
+*secrets.yaml
+
+# Test / scratch
+test-results/
+coverage/
+__pycache__/
+
+# OS / file metadata
+.DS_Store
+Thumbs.db
+
+# Documentation build artifacts
+docs/_build/
