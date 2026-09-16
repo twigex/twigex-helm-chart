@@ -6,6 +6,21 @@ All notable changes to this chart are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Public-repo community & CI files.** `SECURITY.md` (private
+  vulnerability reporting + secret-sanitization rules),
+  `CONTRIBUTING.md` (test procedure, chart rules, PR process),
+  `CODE_OF_CONDUCT.md`, GitHub issue templates (bug/question/feature),
+  PR template, CI workflow (`lint-render.yaml`: lint + render across
+  embedded/external MariaDB, ingress/TLS, Gateway API, and Cube paths),
+  release workflow (`release.yaml`: tag-guarded `helm push` to
+  GHCR), `artifacthub-repo.yml` (repositoryID TODO until the repo is
+  registered on Artifact Hub), and `examples/values-prod-example.yaml`
+  (secret-free production values: ingress + cert-manager TLS +
+  external MariaDB). Fixed `artifacthub.io/license` annotation:
+  Apache-2.0 → MIT, matching `LICENSE.txt`.
+
 ### Fixed
 
 - **Pre-publish tidy-up.** Replaced stale `<sanitized-domain>` pod-label

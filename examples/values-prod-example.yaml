@@ -1,0 +1,73 @@
+# Example: production install — ingress + cert-manager TLS + external MariaDB.
+#
+# Copy to a git-ignored file, fill in CHANGE_ME values, then:
+#
+#   helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
+#     --version 0.0.35 -n twigex --create-namespace \
+#     -f values-prod-example.yaml
+#
+# NEVER commit this file with real values filled in. For CI / GitOps use an
+# external secrets manager (Vault, External Secrets Operator) or the
+# existingSecret.* options instead of literals.
+#
+# Sizing below matches INSTALLATION.md "Small (light prod)" (~10 users).
+
+# ── Ingress + TLS ─────────────────────────────────────────────────────────
+domain: chat.example.com
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  tls:
+    enabled: true
+  certManagerIssuer: letsencrypt-prod
+
+# ── Twigex app ────────────────────────────────────────────────────────────
+twigex:
+  admin:
+    # First-boot admin account (admin GUI login).
+    username: admin
+    email: admin@example.com
+    password: CHANGE_ME-admin-password
+
+  server:
+    # Exactly 32 hex chars: openssl rand -hex 16
+    # ⚠️ IMMUTABLE in practice — rotating it invalidates all encrypted data
+    # in the database. Never change after go-live.
+    encryptKey: CHANGE_ME-openssl-rand-hex-16
+
+  db:
+    host: mariadb.prod.internal   # consulted only when mariadb.mode=external
+
+  resources:
+    requests: {cpu: 500m, memory: 1Gi}
+    limits:   {cpu: "2",  memory: 2Gi}
+
+# ── MariaDB (external) ────────────────────────────────────────────────────
+mariadb:
+  mode: external
+  # Password Twigex uses to connect to your external DB.
+  password: CHANGE_ME-db-password
+
+# ── Redis (Bitnami subchart) ──────────────────────────────────────────────
+redis:
+  auth:
+    password: CHANGE_ME-redis-password
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+
+# ── Optional: Cube.js analytics stack ─────────────────────────────────────
+# Fresh secrets per install: openssl rand -hex 32 (each)
+# cube:
+#   enabled: true
+#   apiSecret: CHANGE_ME-openssl-rand-hex-32
+#   callbackSecret: CHANGE_ME-openssl-rand-hex-32
+
+# ── Optional: office editing (EuroOffice deployed separately) ─────────────
+# twigex.office:
+#   enabled: true
+#   type: eurooffice
+#   host: https://office.example.com
+#   secret: CHANGE_ME-wopi-secret

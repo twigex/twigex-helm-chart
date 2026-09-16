@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a problem with the Twigex Helm chart
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        ⚠️ **Sanitize before posting.** Never include real passwords, the
+        `twigex.server.encryptKey` value, or rendered Secret manifests. Replace
+        them with `REDACTED`. See [SECURITY.md](../../blob/main/SECURITY.md)
+        for the full list of sensitive values. Security vulnerabilities do not
+        belong here — report them privately (see SECURITY.md).
+  - type: input
+    id: chart-version
+    attributes:
+      label: Chart version
+      description: Version installed (helm list -n <namespace>)
+      placeholder: 0.0.35
+    validations:
+      required: true
+  - type: input
+    id: k8s-version
+    attributes:
+      label: Kubernetes version and distribution
+      description: e.g. k3s v1.30, Talos 1.7, EKS 1.29
+      placeholder: k3s v1.30.4
+    validations:
+      required: true
+  - type: dropdown
+    id: mariadb-mode
+    attributes:
+      label: MariaDB mode
+      options:
+        - embedded
+        - external
+    validations:
+      required: true
+  - type: textarea
+    id: values
+    attributes:
+      label: Non-default values used
+      description: "`helm get values <release> -n <namespace>` output, with secrets redacted"
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you expected, and what actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Pod logs / events
+      description: |
+        `kubectl logs -n <namespace> <pod>` and/or
+        `kubectl describe pod -n <namespace> <pod>` — redact anything sensitive.
+      render: shell
+  - type: textarea
+    id: render
+    attributes:
+      label: Rendered manifest excerpt (optional)
+      description: Relevant part of `helm template` output — no Secret payloads.
+      render: yaml

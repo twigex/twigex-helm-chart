@@ -5,7 +5,6 @@ See the [official documentation](https://twigex.com/en/Installation) for setup d
 More info about the project:
 
 - [https://twigex.com](https://twigex.com)
-- [https://twigex.com](https://twigex.com)
 - [https://www.reddit.com/r/twigex/](https://reddit.com/r/twigex)
 
 **Demo:** [Try Twigex in your browser!](https://demo.twigex.com) (Don't post personal stuff. Resets every 30 minutes.)
@@ -378,6 +377,14 @@ openssl rand -hex 16
 ```
 
 This produces a 32-character hex string suitable for `twigex.server.encryptKey`.
+
+---
+
+## License
+
+This Helm chart is licensed under [MIT](LICENSE.txt). The Twigex
+application deployed by this chart is licensed separately under
+[AGPL-3.0](https://github.com/twigex/twigex/blob/main/LICENSE).
 
 ---
 

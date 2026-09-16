@@ -36,7 +36,7 @@ maintainers:
   - name: Twigex
     url: https://twigex.com
 annotations:
-  artifacthub.io/license: "Apache-2.0"
+  artifacthub.io/license: "MIT"
   artifacthub.io/displayName: "Twigex"
   artifacthub.io/links: |
     - name: OCI Registry

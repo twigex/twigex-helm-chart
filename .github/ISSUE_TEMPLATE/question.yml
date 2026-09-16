@@ -1,0 +1,25 @@
+name: Question or usage help
+description: Ask how to configure or use the Twigex Helm chart
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For questions, please check first:
+
+        - [INSTALLATION.md](../../blob/main/INSTALLATION.md) — full install guide
+        - [README.md](../../blob/main/README.md) — values reference
+        - [CHANGELOG.md](../../blob/main/CHANGELOG.md) — breaking changes between versions
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+  - type: input
+    id: chart-version
+    attributes:
+      label: Chart version
+      placeholder: 0.0.35
+    validations:
+      required: false
