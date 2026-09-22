@@ -42,7 +42,7 @@ and rotate:
 - `redis.auth.password`
 - `cube.apiSecret`, `cube.callbackSecret`
 - Storage / SMTP / LDAP / OAuth credentials (`twigex.storage.*`,
-  `twigex.smtp.*`, `twigex.ldap.*`, `twigex.gitea.*`)
+  `twigex.smtp.*`, `twigex.ldap.*`)
 
 Replace them with obvious placeholders (`CHANGE_ME`, `REDACTED`) before
 posting. When redacting `helm template` output, remember the rendered

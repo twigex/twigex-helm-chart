@@ -91,4 +91,4 @@ The twigex pod label is `app=<release>-twigex`; the Twigex app Service is always
 
 ## Full configuration reference
 
-For any `values.yaml` key not covered above (SMTP, LDAP, Gitea OAuth, S3 storage, external secret management via `<release>-twigex`/`<release>-mariadb` secrets, persistence sizing, etc.), consult the Twigex chart's INSTALLATION.md Configuration section directly — don't guess at key names or defaults.
+For any `values.yaml` key not covered above (SMTP, LDAP, S3 storage, external secret management via `<release>-twigex`/`<release>-mariadb` secrets, persistence sizing, etc.), consult the Twigex chart's INSTALLATION.md Configuration section directly — don't guess at key names or defaults.

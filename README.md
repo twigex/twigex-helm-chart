@@ -75,6 +75,9 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.server.encryptKey` | **Exactly 32 hex characters (16 bytes).** Generate with `openssl rand -hex 16`. The chart fails the install at template-render time if this is missing, the wrong length, or contains non-hex characters. ⚠️ Change for production. | string | `"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"` |
 | `twigex.server.tlsCertFile` | Path to TLS cert file (optional) | string | `""` |
 | `twigex.server.tlsKeyFile` | Path to TLS key file (optional) | string | `""` |
+| `twigex.server.trustedProxies` | Trusted proxy CIDRs (comma-joined into `TWIGEX_TRUSTED_PROXIES`) | list | `[]` |
+| `twigex.server.trustedProxyHeaders` | Headers trusted for client IP (comma-joined into `TWIGEX_TRUSTED_PROXY_HEADERS`) | list | `[]` |
+| `twigex.server.maxPublicUploadSize` | Max public share-link upload size in MB (app default 2048) | string | `""` |
 
 ### Database
 
@@ -101,7 +104,6 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 |------|-------------|------|---------|
 | `twigex.storage.type` | Storage type: `local` or `s3` | string | `"local"` |
 | `twigex.storage.name` | Human-readable storage name | string | `"Local storage"` |
-| `twigex.storage.path` | Local storage path | string | `"data/files"` |
 | `twigex.storage.endpoint` | S3 endpoint (required if type=s3) | string | `""` |
 | `twigex.storage.accessKey` | S3 access key (required if type=s3) | string | `""` |
 | `twigex.storage.secretKey` | S3 secret key (required if type=s3) | string | `""` |
@@ -118,6 +120,9 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.smtp.password` | SMTP password | string | `""` |
 | `twigex.smtp.security` | SMTP security (e.g. `tls`, `starttls`) | string | `""` |
 | `twigex.smtp.authEnabled` | Enable SMTP authentication | bool | `false` |
+| `twigex.smtp.fromAddress` | From address for outgoing mail | string | `""` |
+| `twigex.smtp.fromName` | From display name | string | `""` |
+| `twigex.smtp.replyTo` | Reply-To address | string | `""` |
 
 ### Office (Collabora or EuroOffice)
 
@@ -139,37 +144,34 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.channel.linkPreviews` | Enable link previews in chat | bool | `true` |
 | `twigex.channel.gif.enabled` | Enable GIF picker | bool | `false` |
 | `twigex.channel.gif.apiKey` | GIF provider API key | string | `""` |
-| `twigex.channel.gif.clientKey` | GIF provider client key | string | `""` |
 
-### Gitea OAuth
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.gitea.enabled` | Enable Gitea OAuth login | bool | `false` |
-| `twigex.gitea.clientID` | Gitea OAuth client ID | string | `""` |
-| `twigex.gitea.clientSecret` | Gitea OAuth client secret | string | `""` |
-| `twigex.gitea.authEndpoint` | Gitea authorization endpoint | string | `"https://gitea.example.com/login/oauth/authorize"` |
-| `twigex.gitea.tokenEndpoint` | Gitea token endpoint | string | `"https://gitea.example.com/login/oauth/access_token"` |
-| `twigex.gitea.userAPIEndpoint` | Gitea user API endpoint | string | `"https://gitea.example.com/api/v1/user"` |
-| `twigex.gitea.redirectURL` | OAuth redirect URL. Should match your domain when `gitea.enabled=true`. | string | `"http://localhost:3000/callback/gitea"` |
-| `twigex.gitea.scopes` | OAuth scopes | string | `"user:email"` |
 
 ### LDAP
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.ldap.enabled` | Enable LDAP authentication | bool | `false` |
-| `twigex.ldap.serverURL` | LDAP server URL | string | `"ldap://ldap.example.com:389"` |
-| `twigex.ldap.baseDN` | LDAP base DN | string | `"dc=example,dc=com"` |
-| `twigex.ldap.bindDN` | LDAP bind DN | string | `"cn=admin,dc=example,dc=com"` |
+| `twigex.ldap.host` | LDAP server hostname | string | `""` |
+| `twigex.ldap.port` | LDAP server port | int | `389` |
+| `twigex.ldap.baseDN` | LDAP base DN | string | `""` |
+| `twigex.ldap.bindDN` | LDAP bind DN | string | `""` |
 | `twigex.ldap.bindPassword` | LDAP bind password | string | `""` |
+| `twigex.ldap.connectionSecurity` | Connection security: `""`/`none`, `tls`, `starttls` | string | `""` |
+| `twigex.ldap.caCert` | CA certificate (PEM) for TLS verification | string | `""` |
 | `twigex.ldap.insecureSkipVerify` | Skip TLS verification | bool | `false` |
+| `twigex.ldap.timeoutSeconds` | LDAP operation timeout (app default 10) | string | `""` |
 | `twigex.ldap.userFilter` | LDAP user filter | string | `"(uid={0})"` |
-| `twigex.ldap.userIDAttr` | User ID attribute | string | `"uid"` |
+| `twigex.ldap.usernameAttr` | Username attribute | string | `""` |
+| `twigex.ldap.idAttr` | Unique ID attribute | string | `"uid"` |
 | `twigex.ldap.firstNameAttr` | First name attribute | string | `"givenName"` |
 | `twigex.ldap.lastNameAttr` | Last name attribute | string | `"sn"` |
 | `twigex.ldap.emailAttr` | Email attribute | string | `"mail"` |
-| `twigex.ldap.allowedGroups` | Comma-separated allowed LDAP groups | string | `""` |
+| `twigex.ldap.syncEnabled` | Enable LDAP user sync | bool | `false` |
+| `twigex.ldap.syncIntervalMinutes` | Sync interval in minutes (app default 60) | string | `""` |
+| `twigex.ldap.syncMaxDeactivatePercent` | Max % of users a sync may deactivate (app default 20) | string | `""` |
+| `twigex.ldap.allowedGroups` | Pipe-separated allowed LDAP groups | string | `""` |
 
 ### Admin (First Boot)
 
@@ -268,10 +270,10 @@ Set the password values in your ArgoCD Application or values file. The chart cre
 
 Set `twigex.externalSecret: true` and/or `mariadb.externalSecret: true`. The chart will **not** create the corresponding secret. You must provide secrets with the expected names and keys:
 
-- `<release>-twigex` — keys: `COSPACE_ADMIN_PASSWORD`, `COSPACE_SERVER_ENCRYPT_KEY`, `COSPACE_DB_PASSWORD`, `COSPACE_REDIS_PASSWORD`, `COSPACE_STORAGE_ACCESS_KEY`, `COSPACE_STORAGE_SECRET_KEY`, `COSPACE_SMTP_PASSWORD`, `COSPACE_OFFICE_SECRET`, `COSPACE_CHANNEL_SECRET`, `COSPACE_GITEA_CLIENT_SECRET`, `COSPACE_LDAP_BIND_PASSWORD`
+- `<release>-twigex` — keys: `TWIGEX_ADMIN_PASSWORD`, `TWIGEX_SERVER_ENCRYPT_KEY`, `TWIGEX_DB_PASSWORD`, `TWIGEX_REDIS_PASSWORD`, `TWIGEX_STORAGE_ACCESS_KEY`, `TWIGEX_STORAGE_SECRET_KEY`, `TWIGEX_SMTP_PASSWORD`, `TWIGEX_OFFICE_SECRET`, `TWIGEX_CHANNEL_SECRET`, `TWIGEX_LDAP_BIND_PASSWORD`
 - `<release>-mariadb` — keys: `mariadb-password`, `mariadb-root-password`
 
-> **⚠️ Mode `embedded` + ESO:** when you set `mariadb.externalSecret: true` alongside `mariadb.mode=embedded`, the chart skips its own `<release>-mariadb` Secret. You must provide that Secret externally. Its `mariadb-password` key MUST match the `mariadb.password` value, because the Twigex app uses `mariadb.password` (via `twigex-secret.COSPACE_DB_PASSWORD`) to authenticate. If they drift, the app will fail to connect. In practice, source both from the same ESO Secret.
+> **⚠️ Mode `embedded` + ESO:** when you set `mariadb.externalSecret: true` alongside `mariadb.mode=embedded`, the chart skips its own `<release>-mariadb` Secret. You must provide that Secret externally. Its `mariadb-password` key MUST match the `mariadb.password` value, because the Twigex app uses `mariadb.password` (via `twigex-secret.TWIGEX_DB_PASSWORD`) to authenticate. If they drift, the app will fail to connect. In practice, source both from the same ESO Secret.
 
 ---
 

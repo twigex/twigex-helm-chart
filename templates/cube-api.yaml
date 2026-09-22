@@ -34,7 +34,7 @@ spec:
               value: {{ .Release.Name }}-cube-router
             - name: CUBEJS_DEV_MODE
               value: {{ .Values.cube.devMode | quote }}
-            - name: COSPACE_INTERNAL_URL
+            - name: TWIGEX_INTERNAL_URL
               value: {{ if .Values.cube.internalUrl }}{{ .Values.cube.internalUrl | quote }}{{ else }}{{ printf "http://%s:%d/api/internal/cube" .Release.Name (int .Values.twigex.service.port) | quote }}{{ end }}
           ports:
             - containerPort: 4000

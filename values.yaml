@@ -94,6 +94,12 @@ twigex:
     encryptKey: ""
     tlsCertFile: ""
     tlsKeyFile: ""
+    # Comma-separated lists passed to the app as TWIGEX_TRUSTED_PROXIES /
+    # TWIGEX_TRUSTED_PROXY_HEADERS. Empty list = env omitted (app default).
+    trustedProxies: []        # e.g. ["10.0.0.0/8", "192.168.0.0/16"]
+    trustedProxyHeaders: []   # e.g. ["X-Forwarded-For", "X-Real-IP"]
+    # Max public (share-link) upload size in MB. Empty = app default (2048 MB).
+    maxPublicUploadSize: ""
 
   # ── Database connection (consumed by Twigex app, not by MariaDB itself) ──
   # In modes 1/2/3 the host is auto-derived from the release name.
@@ -114,7 +120,7 @@ twigex:
     host: "127.0.0.1"
 
   # ── SMTP ──
-  # SMTP env vars are gated on `smtp.host`. When unset, the COSPACE_SMTP_* envs are
+  # SMTP env vars are gated on `smtp.host`. When unset, the TWIGEX_SMTP_* envs are
   # omitted from the pod so the admin GUI email settings panel is editable instead
   # of env-locked. Set `smtp.host` (and any of the other fields) via `--set` to
   # configure SMTP at install time and lock the GUI.
@@ -125,9 +131,12 @@ twigex:
     password: ""
     security: ""
     authEnabled: false
+    fromAddress: ""
+    fromName: ""
+    replyTo: ""
 
   # ── Office (EuroOffice / Collabora; both expose WOPI) ──
-  # Office env vars are gated on `office.host`. When unset, the COSPACE_OFFICE_*
+  # Office env vars are gated on `office.host`. When unset, the TWIGEX_OFFICE_*
   # envs are omitted from the pod so the admin GUI office settings panel is
   # editable instead of env-locked. Set `office.host` via `--set` to configure
   # Office at install time and lock the GUI.
@@ -139,11 +148,11 @@ twigex:
 
   # ── Channel (LiveKit; configured client side only — server deployed separately) ──
   # Channel env vars are gated on whether the feature is actually configured:
-  #   - Video:     `channel.host`           → if unset, the COSPACE_CHANNEL_{ENABLED,HOST,KEY,SECRET}
+  #   - Video:     `channel.host`           → if unset, the TWIGEX_CHANNEL_{ENABLED,HOST,KEY,SECRET}
   #                                          envs are omitted so the GUI admin can edit them
   #                                          instead of being env-locked.
-  #   - LinkPrev:  `channel.linkPreviews`    → same pattern for COSPACE_CHANNEL_LINK_PREVIEWS.
-  #   - GIF:       `channel.gif.enabled`     → same pattern for COSPACE_CHANNEL_GIF_*.
+  #   - LinkPrev:  `channel.linkPreviews`    → same pattern for TWIGEX_CHANNEL_LINK_PREVIEWS.
+  #   - GIF:       `channel.gif.enabled`     → same pattern for TWIGEX_CHANNEL_GIF_*.
   # Set these via `--set` to install LiveKit values via Helm; leave them empty/false
   # to manage them from the admin GUI.
   channel:
@@ -155,14 +164,12 @@ twigex:
     gif:
       enabled: false
       apiKey: ""
-      clientKey: ""
 
   # ── Storage backend (discriminated union) ──
   storage:
     type: "local"           # local | s3 | s3compat
     local:
       name: "Local storage"
-      path: "data/files"
     s3:
       name: "S3 storage"
       endpoint: ""
@@ -171,37 +178,35 @@ twigex:
       secretKey: ""
       ssl: true
 
-  # ── Gitea OAuth ──
-  gitea:
-    enabled: false
-    clientID: ""
-    clientSecret: ""
-    authEndpoint: "https://gitea.example.com/login/oauth/authorize"
-    tokenEndpoint: "https://gitea.example.com/login/oauth/access_token"
-    userAPIEndpoint: "https://gitea.example.com/api/v1/user"
-    redirectURL: "http://localhost:3000/callback/gitea"
-    scopes: "user:email"
 
   # ── LDAP ──
-  # LDAP env vars are gated on `ldap.serverURL`. When unset, the COSPACE_LDAP_*
+  # LDAP env vars are gated on `ldap.host`. When unset, the TWIGEX_LDAP_*
   # envs are omitted from the pod so the admin GUI auth settings panel is
-  # editable instead of env-locked. Set `ldap.serverURL` (and any of the other
+  # editable instead of env-locked. Set `ldap.host` (and any of the other
   # fields) via `--set` to configure LDAP at install time and lock the GUI.
   ldap:
     enabled: false
-    # serverURL: "ldap://ldap.example.com:389"
+    # host: "ldap.example.com"
     # baseDN: "dc=example,dc=com"
     # bindDN: "cn=admin,dc=example,dc=com"
-    serverURL: ""
+    host: ""
+    port: 389
     baseDN: ""
     bindDN: ""
     bindPassword: ""
+    connectionSecurity: ""
+    caCert: ""
     insecureSkipVerify: false
+    timeoutSeconds: ""
     userFilter: "(uid={0})"
-    userIDAttr: "uid"
+    usernameAttr: ""
+    idAttr: "uid"
     firstNameAttr: "givenName"
     lastNameAttr: "sn"
     emailAttr: "mail"
+    syncEnabled: false
+    syncIntervalMinutes: ""
+    syncMaxDeactivatePercent: ""
     allowedGroups: ""
 
   # ── Admin bootstrap (first boot only) ──
@@ -309,24 +314,23 @@ twigex:
   existingSecret:
     name: ""
     keys:
-      COSPACE_ADMIN_PASSWORD: COSPACE_ADMIN_PASSWORD
-      COSPACE_SERVER_ENCRYPT_KEY: COSPACE_SERVER_ENCRYPT_KEY
-      COSPACE_DB_PASSWORD: COSPACE_DB_PASSWORD
-      COSPACE_REDIS_PASSWORD: COSPACE_REDIS_PASSWORD
-      COSPACE_STORAGE_ACCESS_KEY: COSPACE_STORAGE_ACCESS_KEY
-      COSPACE_STORAGE_SECRET_KEY: COSPACE_STORAGE_SECRET_KEY
-      COSPACE_SMTP_PASSWORD: COSPACE_SMTP_PASSWORD
-      COSPACE_OFFICE_SECRET: COSPACE_OFFICE_SECRET
-      COSPACE_CHANNEL_SECRET: COSPACE_CHANNEL_SECRET
-      COSPACE_GITEA_CLIENT_SECRET: COSPACE_GITEA_CLIENT_SECRET
-      COSPACE_LDAP_BIND_PASSWORD: COSPACE_LDAP_BIND_PASSWORD
+      TWIGEX_ADMIN_PASSWORD: TWIGEX_ADMIN_PASSWORD
+      TWIGEX_SERVER_ENCRYPT_KEY: TWIGEX_SERVER_ENCRYPT_KEY
+      TWIGEX_DB_PASSWORD: TWIGEX_DB_PASSWORD
+      TWIGEX_REDIS_PASSWORD: TWIGEX_REDIS_PASSWORD
+      TWIGEX_STORAGE_ACCESS_KEY: TWIGEX_STORAGE_ACCESS_KEY
+      TWIGEX_STORAGE_SECRET_KEY: TWIGEX_STORAGE_SECRET_KEY
+      TWIGEX_SMTP_PASSWORD: TWIGEX_SMTP_PASSWORD
+      TWIGEX_OFFICE_SECRET: TWIGEX_OFFICE_SECRET
+      TWIGEX_CHANNEL_SECRET: TWIGEX_CHANNEL_SECRET
+      TWIGEX_LDAP_BIND_PASSWORD: TWIGEX_LDAP_BIND_PASSWORD
 
-  # ── Arbitrary COSPACE_* env-var passthrough ──
-  # Maps an arbitrary key to a literal value injected as COSPACE_<KEY>.
+  # ── Arbitrary TWIGEX_* env-var passthrough ──
+  # Maps an arbitrary key to a literal value injected as TWIGEX_<KEY>.
   # Hyphens uppercased to underscores.
   #   config:
-  #     FOO_BAR: "hello"   # => COSPACE_FOO_BAR=hello
-  #     SOME-THING: "x"    # => COSPACE_SOME_THING=x
+  #     FOO_BAR: "hello"   # => TWIGEX_FOO_BAR=hello
+  #     SOME-THING: "x"    # => TWIGEX_SOME_THING=x
   config: {}
 
   # Same shape but value comes from a Secret key reference.
@@ -378,7 +382,7 @@ mariadb:
 #
 # Chart reads:
 #   <release>-redis-master:6379 via .Release.Name
-#   <release>-twigex Secret key COSPACE_REDIS_PASSWORD from redis.auth.password
+#   <release>-twigex Secret key TWIGEX_REDIS_PASSWORD from redis.auth.password
 #
 # `redis.address` and `redis.password` from earlier versions are gone (use the
 # Bitnami-native fields below).
@@ -405,7 +409,7 @@ redis:
 #   - cube-router   (Deployment + Service, port 9999, cubestore)
 #   - cube-worker-1 (Deployment + Service, port 9001, cubestore)
 #
-# The Twigex Deployment also gets three COSPACE_COLLIMATO_CUBE_* env vars.
+# The Twigex Deployment also gets three TWIGEX_COLLIMATO_CUBE_* env vars.
 #
 # Required values when cube.enabled=true (the chart validator hard-fails
 # without them, or upgrade fails with `secret "<release>-cube-secret" not found`):
@@ -431,7 +435,7 @@ cube:
   api:
     replicas: 1
     # Port the cube-api Service listens on. Used by Twigex to build
-    # COSPACE_COLLIMATO_CUBE_API_URL (http://<release>-cube-api:<port>).
+    # TWIGEX_COLLIMATO_CUBE_API_URL (http://<release>-cube-api:<port>).
     # NOTE: only Twigex's view of cube-api's port is templated today;
     # templates/cube-api.yaml still hardcodes 4000 for the Service itself.
     service:

@@ -15,10 +15,10 @@ data:
     //
     // Required environment variables:
     //   CUBEJS_API_SECRET     shared secret that verifies the JWT from twigex.
-    //   COSPACE_INTERNAL_URL  base URL of twigex's internal Cube API.
+    //   TWIGEX_INTERNAL_URL  base URL of twigex's internal Cube API.
     //   CUBE_CALLBACK_SECRET  shared secret sent back to twigex on every callback.
 
-    const COSPACE_URL = process.env.COSPACE_INTERNAL_URL;
+    const TWIGEX_URL = process.env.TWIGEX_INTERNAL_URL;
     const CALLBACK_SECRET = process.env.CUBE_CALLBACK_SECRET;
 
     const DEBUG = process.env.CUBEJS_DEV_MODE === 'true';
@@ -35,11 +35,11 @@ data:
       console.error('  ', err && err.stack ? err.stack : String(err));
     }
 
-    if (!COSPACE_URL) console.warn('[cube:warn] COSPACE_INTERNAL_URL is not set');
+    if (!TWIGEX_URL) console.warn('[cube:warn] TWIGEX_INTERNAL_URL is not set');
     if (!CALLBACK_SECRET) console.warn('[cube:warn] CUBE_CALLBACK_SECRET is not set');
 
     async function callCospace(pathname, params) {
-      const url = new URL(COSPACE_URL + pathname);
+      const url = new URL(TWIGEX_URL + pathname);
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null) {
           url.searchParams.set(key, value);
