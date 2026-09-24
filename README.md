@@ -86,7 +86,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.service.nodePort` | NodePort (required if `type=NodePort`, range 30000–32767) | string | `""` |
 | `twigex.service.loadBalancerIP` | Static LB IP (LoadBalancer only) | string | `""` |
 | `twigex.service.annotations` | Service annotations | object | `{}` |
-| `twigex.pod.{annotations,labels,nodeSelector,affinity,tolerations,priorityClassName,terminationGracePeriodSeconds,topologySpreadConstraints,securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
+| `twigex.pod.{annotations,labels,nodeSelector, affinity,tolerations,priorityClassName, terminationGracePeriodSeconds,topologySpreadConstraints, securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
 | `twigex.probes.enabled` | Render liveness/readiness probes (TCP socket on `twigex.server.port`) | bool | `true` |
 | `twigex.probes.{liveness,readiness}.*` | Probe tuning (`initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`) | object | see `values.yaml` |
 | `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment | bool | `true` |
