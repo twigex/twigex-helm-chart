@@ -30,10 +30,16 @@ Feel free to try it out, but please use it with care.
 
 ```sh
 helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
-  --namespace twigex \
+  --namespace twigex --create-namespace \
   --set domain=example.com \
-  --set twigex.admin.password=your_password
+  --set twigex.admin.password=your_password \
+  --set twigex.server.encryptKey=$(openssl rand -hex 16) \
+  --set mariadb.password=your_mariadb_password \
+  --set mariadb.rootPassword=your_mariadb_root_password \
+  --set redis.auth.password=your_redis_password
 ```
+
+The chart validator fails the install if any of `twigex.server.encryptKey` (exactly 32 hex chars), `mariadb.password`, `mariadb.rootPassword` (embedded mode), or `redis.auth.password` is missing. See [INSTALLATION.md](INSTALLATION.md) for the external-MariaDB, Ingress/TLS, and optional-dependency walkthroughs.
 
 When upgrading, please refer to the [Upgrading](#upgrading) section at the bottom of this document for major and breaking changes.
 
@@ -57,13 +63,72 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `ingress.customAnnotations` | Additional/overriding annotations | object | `{}` |
 | `ingress.tls.enabled` | Render the TLS block in the Ingress. When false, the Ingress is HTTP-only. | bool | `false` |
 | `ingress.certManagerIssuer` | Name of an existing cert-manager ClusterIssuer. When set, the chart adds the `cert-manager.io/cluster-issuer` annotation so cert-manager creates the TLS Secret named `<sanitized-domain>`. | string | `""` |
+| `ingress.tlsExistingSecret` | Use an existing Secret for Ingress TLS instead of cert-manager (overrides the `<sanitized-domain>` default name; mutually exclusive with `certManagerIssuer`). | string | `""` |
 
 ### Twigex Image
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex` |
-| `twigex.image.tag` | Container image tag | string | `"latest"` |
+| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `v0.14.0-rc2`). | string | `""` |
+| `twigex.image.pullPolicy` | Container image pullPolicy | string | `IfNotPresent` |
+
+### Deployment & Workload
+
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| `twigex.replicas` | Twigex Deployment replicas | int | `1` |
+| `twigex.strategy` | Deployment strategy: `Recreate` or `RollingUpdate` | string | `Recreate` |
+| `twigex.resources` | CPU/memory requests and limits for the Twigex container | object | `{requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}` |
+| `twigex.service.type` | Service type: `ClusterIP`, `NodePort`, or `LoadBalancer` | string | `ClusterIP` |
+| `twigex.service.port` | Service port | int | `3000` |
+| `twigex.service.targetPort` | Container port targeted by the Service | int | `3000` |
+| `twigex.service.nodePort` | NodePort (required if `type=NodePort`, range 30000–32767) | string | `""` |
+| `twigex.service.loadBalancerIP` | Static LB IP (LoadBalancer only) | string | `""` |
+| `twigex.service.annotations` | Service annotations | object | `{}` |
+| `twigex.pod.{annotations,labels,nodeSelector,affinity,tolerations,priorityClassName,terminationGracePeriodSeconds,topologySpreadConstraints,securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
+| `twigex.probes.enabled` | Render liveness/readiness probes (TCP socket on `twigex.server.port`) | bool | `true` |
+| `twigex.probes.{liveness,readiness}.*` | Probe tuning (`initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`) | object | see `values.yaml` |
+| `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment | bool | `true` |
+| `twigex.pdb.minAvailable` | PDB `minAvailable` | int | `1` |
+| `twigex.serviceAccount.create` | Create a ServiceAccount (`<release>-twigex`) | bool | `true` |
+| `twigex.serviceAccount.name` | Override the ServiceAccount name | string | `""` |
+| `twigex.serviceAccount.imagePullSecrets` | Image pull secrets for private registries | list | `[]` |
+| `twigex.rbac.create` | Create the Role + RoleBinding the app needs to manage per-workspace resources at runtime | bool | `true` |
+| `twigex.config` | Arbitrary `TWIGEX_<KEY>=value` env passthrough (hyphens become underscores) | object | `{}` |
+| `twigex.configFromSecrets` | Same shape, but each value is a `{name, key}` Secret reference | object | `{}` |
+
+### Gateway API (HTTPRoute — alternative to Ingress)
+
+When `gateway.enabled=true`, the chart emits an HTTPRoute instead of an Ingress. Use `gateway:` **or** `ingress:`, not both. The Gateway itself is cluster infrastructure — create it with your Gateway API implementation (Cilium, NGINX Gateway Fabric, Envoy Gateway, …); TLS termination lives on the Gateway listener, so `ingress.certManagerIssuer` / `ingress.tlsExistingSecret` don't apply here.
+
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| `gateway.enabled` | Emit an HTTPRoute instead of an Ingress | bool | `false` |
+| `gateway.name` | Name of the existing Gateway to attach to (required when enabled) | string | `""` |
+| `gateway.namespace` | Gateway's namespace (empty = release namespace) | string | `""` |
+| `gateway.sectionName` | Listener `sectionName` to attach to (empty = first listener) | string | `""` |
+| `gateway.annotations` | HTTPRoute annotations | object | `{}` |
+
+### Cube.js Analytics (optional)
+
+When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker (Deployments + Services), a `cube-config` ConfigMap, and a `cube-secret` Secret, and injects `TWIGEX_COLLIMATO_CUBE_*` env vars into the Twigex app. Required values when enabling (the chart validator hard-fails without them, unless `cube.existingSecret.name` points at a user-managed Secret): `cube.apiSecret` and `cube.callbackSecret` — generate fresh ones per install with `openssl rand -hex 32`.
+
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| `cube.enabled` | Deploy the Cube.js analytics backend | bool | `false` |
+| `cube.image.api.{repository,tag,pullPolicy}` | cube-api image | object | `cubejs/cube:latest` |
+| `cube.image.store.{repository,tag,pullPolicy}` | cubestore image (router + workers) | object | `cubejs/cubestore:latest` |
+| `cube.apiSecret` | Shared secret Cube verifies the Twigex JWT against (required unless `cube.existingSecret.name`) | string | `""` |
+| `cube.callbackSecret` | Secret sent back to Twigex on every Cube callback (required unless `cube.existingSecret.name`) | string | `""` |
+| `cube.existingSecret.name` | Use a user-managed Secret (`CUBEJS_API_SECRET`, `CUBE_CALLBACK_SECRET` keys) instead of a chart-managed one | string | `""` |
+| `cube.api.replicas` | cube-api replicas | int | `1` |
+| `cube.api.service.port` | Port used by Twigex to build `TWIGEX_COLLIMATO_CUBE_API_URL` (note: the cube-api Service itself still hardcodes 4000) | int | `4000` |
+| `cube.api/storeRouter/storeWorker.resources` | Per-workload CPU/memory requests and limits | object | see `values.yaml` |
+| `cube.storeWorker.replicas` | cubestore worker replicas | int | `1` |
+| `cube.pdb.{enabled,minAvailable}` | PodDisruptionBudget for Cube workloads | object | `enabled: true, minAvailable: 1` |
+| `cube.internalUrl` | Override the DNS name Twigex uses to reach Cube (must be a valid `http(s)://` URL) | string | `""` |
+| `cube.devMode` | Cube.js dev mode | bool | `false` |
 
 ### Server
 
@@ -72,7 +137,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.server.port` | Server listen port (used for the container, Service, and Ingress backend) | int | `3000` |
 | `twigex.server.defaultLocale` | Default UI locale | string | `"en"` |
 | `twigex.server.sessionLengthDays` | Session lifetime in days | int | `30` |
-| `twigex.server.encryptKey` | **Exactly 32 hex characters (16 bytes).** Generate with `openssl rand -hex 16`. The chart fails the install at template-render time if this is missing, the wrong length, or contains non-hex characters. ⚠️ Change for production. | string | `"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"` |
+| `twigex.server.encryptKey` | **Exactly 32 hex characters (16 bytes).** Generate with `openssl rand -hex 16`. The chart fails the install at template-render time if this is missing, the wrong length, or contains non-hex characters. No default — required. ⚠️ Change per-install; immutable in practice once data exists. | string | `""` (required) |
 | `twigex.server.tlsCertFile` | Path to TLS cert file (optional) | string | `""` |
 | `twigex.server.tlsKeyFile` | Path to TLS key file (optional) | string | `""` |
 | `twigex.server.trustedProxies` | Trusted proxy CIDRs (comma-joined into `TWIGEX_TRUSTED_PROXIES`) | list | `[]` |
@@ -83,7 +148,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.db.host` | MariaDB host. Ignored by the chart **unless** mode 2 (External MariaDB) is active — see [External MariaDB](#external-mariadb). In mode 2, this is the external endpoint the Twigex app connects to (required). | string | `"127.0.0.1"` |
+| `twigex.db.host` | MariaDB host. Auto-derived from the release name (`<release>-mariadb`) **unless** `mariadb.mode=external` — see [External MariaDB](#external-mariadb). In external mode, this is the external endpoint the Twigex app connects to (required; the default `127.0.0.1` is rejected). | string | `"127.0.0.1"` |
 | `twigex.db.port` | MariaDB port | int | `3306` |
 | `twigex.db.user` | Database username | string | `"twigex"` |
 | `twigex.db.name` | Database name | string | `"twigex"` |
@@ -102,22 +167,25 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.storage.type` | Storage type: `local` or `s3` | string | `"local"` |
-| `twigex.storage.name` | Human-readable storage name | string | `"Local storage"` |
-| `twigex.storage.endpoint` | S3 endpoint (required if type=s3) | string | `""` |
-| `twigex.storage.accessKey` | S3 access key (required if type=s3) | string | `""` |
-| `twigex.storage.secretKey` | S3 secret key (required if type=s3) | string | `""` |
-| `twigex.storage.bucket` | S3 bucket name | string | `""` |
-| `twigex.storage.ssl` | Use SSL for S3 | bool | `true` |
+| `twigex.storage.type` | Storage type: `local`, `s3`, or `s3compat` | string | `"local"` |
+| `twigex.storage.local.name` | Human-readable name for local storage | string | `"Local storage"` |
+| `twigex.storage.s3.name` | Human-readable name for S3 storage (used when type is `s3`/`s3compat`) | string | `"S3 storage"` |
+| `twigex.storage.s3.endpoint` | S3 endpoint (required if type=s3/s3compat) | string | `""` |
+| `twigex.storage.s3.accessKey` | S3 access key (required if type=s3/s3compat) | string | `""` |
+| `twigex.storage.s3.secretKey` | S3 secret key (required if type=s3/s3compat) | string | `""` |
+| `twigex.storage.s3.bucket` | S3 bucket name | string | `""` |
+| `twigex.storage.s3.ssl` | Use SSL for S3 | bool | `true` |
+
+> **Note:** S3 sub-keys are only passed to the app when `twigex.storage.type` is `s3` or `s3compat`. The access/secret keys are read from the `<release>-twigex` Secret (`TWIGEX_STORAGE_ACCESS_KEY` / `TWIGEX_STORAGE_SECRET_KEY`).
 
 ### SMTP
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.smtp.host` | SMTP server host | string | `"smtp.example.com"` |
-| `twigex.smtp.port` | SMTP server port | int | `1025` |
+| `twigex.smtp.host` | SMTP server host. Empty (default) = all `TWIGEX_SMTP_*` env vars are omitted from the pod, leaving the admin GUI email settings editable; setting it locks the GUI. | string | `""` |
+| `twigex.smtp.port` | SMTP server port | string | `""` |
 | `twigex.smtp.username` | SMTP username | string | `""` |
-| `twigex.smtp.password` | SMTP password | string | `""` |
+| `twigex.smtp.password` | SMTP password (rendered into the `<release>-twigex` Secret as `TWIGEX_SMTP_PASSWORD`) | string | `""` |
 | `twigex.smtp.security` | SMTP security (e.g. `tls`, `starttls`) | string | `""` |
 | `twigex.smtp.authEnabled` | Enable SMTP authentication | bool | `false` |
 | `twigex.smtp.fromAddress` | From address for outgoing mail | string | `""` |
@@ -130,30 +198,28 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 |------|-------------|------|---------|
 | `twigex.office.enabled` | Enable office document editing. Pick the editor via `twigex.office.type`. | bool | `false` |
 | `twigex.office.type` | Office editor type. Valid values: `collabora` or `eurooffice`. Both expose the WOPI API. | string | `""` |
-| `twigex.office.host` | Office editor URL. Required when `office.enabled=true`. | string | `"http://localhost:9980"` |
-| `twigex.office.secret` | JWT secret if configured on the office editor. | string | `""` |
+| `twigex.office.host` | Office editor URL. Empty (default) = `TWIGEX_OFFICE_*` env vars omitted (admin GUI editable); setting it configures office editing and locks the GUI. | string | `""` |
+| `twigex.office.secret` | JWT secret if configured on the office editor (rendered into the `<release>-twigex` Secret as `TWIGEX_OFFICE_SECRET`). | string | `""` |
 
 ### Channel (LiveKit / WebRTC)
 
+The chart configures the Twigex app client side only; the LiveKit server itself is deployed separately. Env vars are gated: `TWIGEX_CHANNEL_{ENABLED,HOST,KEY,SECRET}` are emitted only when `twigex.channel.host` is set; `TWIGEX_CHANNEL_LINK_PREVIEWS` only when `linkPreviews` is true; `TWIGEX_CHANNEL_GIF_*` only when `gif.enabled` is true. Unset = the admin GUI fields stay editable.
+
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.channel.enabled` | Enable Channel (LiveKit) | bool | `false` |
-| `twigex.channel.host` | LiveKit WebSocket URL. Required when `channel.enabled=true`. | string | `"ws://localhost:7880"` |
+| `twigex.channel.enabled` | Enable Channel (LiveKit). Only rendered when `channel.host` is set. | bool | `false` |
+| `twigex.channel.host` | LiveKit WebSocket URL | string | `""` |
 | `twigex.channel.key` | LiveKit API key | string | `""` |
-| `twigex.channel.secret` | LiveKit API secret | string | `""` |
-| `twigex.channel.linkPreviews` | Enable link previews in chat | bool | `true` |
+| `twigex.channel.secret` | LiveKit API secret (rendered into the `<release>-twigex` Secret as `TWIGEX_CHANNEL_SECRET`) | string | `""` |
+| `twigex.channel.linkPreviews` | Enable link previews in chat (emits `TWIGEX_CHANNEL_LINK_PREVIEWS` when true) | bool | `false` |
 | `twigex.channel.gif.enabled` | Enable GIF picker | bool | `false` |
 | `twigex.channel.gif.apiKey` | GIF provider API key | string | `""` |
-
-
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
 
 ### LDAP
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.ldap.host` | LDAP server hostname | string | `""` |
+| `twigex.ldap.host` | LDAP server hostname. Empty (default) = all `TWIGEX_LDAP_*` env vars are omitted (admin GUI editable); setting it locks the GUI. | string | `""` |
 | `twigex.ldap.port` | LDAP server port | int | `389` |
 | `twigex.ldap.baseDN` | LDAP base DN | string | `""` |
 | `twigex.ldap.bindDN` | LDAP bind DN | string | `""` |
@@ -172,6 +238,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.ldap.syncIntervalMinutes` | Sync interval in minutes (app default 60) | string | `""` |
 | `twigex.ldap.syncMaxDeactivatePercent` | Max % of users a sync may deactivate (app default 20) | string | `""` |
 | `twigex.ldap.allowedGroups` | Pipe-separated allowed LDAP groups | string | `""` |
+| `twigex.ldap.enabled` | LDAP feature flag (rendered as `TWIGEX_LDAP_ENABLED` when `ldap.host` is set) | bool | `false` |
 
 ### Admin (First Boot)
 
@@ -179,6 +246,7 @@ The admin user is created only on first boot when no users exist in the database
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `twigex.admin.enabled` | Create the bootstrap admin user on first boot (when `false`, no `TWIGEX_ADMIN_PASSWORD` env is rendered) | bool | `true` |
 | `twigex.admin.name` | Admin first name | string | `"Admin"` |
 | `twigex.admin.lastName` | Admin last name | string | `"User"` |
 | `twigex.admin.username` | Admin username | string | `"admin"` |
@@ -208,8 +276,8 @@ The admin user is created only on first boot when no users exist in the database
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
 | `redis.auth.password` | Redis password. **Used by both the Bitnami Redis subchart and the Twigex app** (via the chart's `twigex-secret.yaml`). | string | `"supersecretpassword"` |
-| `redis.master.persistence.enabled` | Enable Redis persistence | bool | `true` |
-| `redis.master.persistence.size` | Redis PVC size | string | `"1Gi"` |
+| `redis.master.persistence.enabled` | Enable Redis persistence | bool | `false` |
+| `redis.master.persistence.size` | Redis PVC size (only used when persistence is enabled) | string | `"1Gi"` |
 
 ### MariaDB Backend Options
 
@@ -240,7 +308,7 @@ Requirements:
 --set mariadb.password=$YOUR_EXTERNAL_DB_PASSWORD
 ```
 
-`mariadb.mode=external` selects external mode. The chart deploys no MariaDB resources in this mode. `twigex.db.host` must be set (the default `127.0.0.1` is rejected). `mariadb.rootPassword` is **not required**. If your credentials live in a user-managed Secret, set `mariadb.externalSecret=true` (which only matters for `mode=embedded` — in `external` mode there's no chart-managed Secret) and `mariadb.existingSecret.{name,keys}` so the chart reads from yours.
+`mariadb.mode=external` selects external mode. The chart deploys no MariaDB resources in this mode. `twigex.db.host` must be set (the default `127.0.0.1` is rejected). `mariadb.rootPassword` is **not required**. `mariadb.externalSecret` has **no effect** in external mode — there is no chart-managed Secret to skip; the Twigex app reads its DB password from the `<release>-twigex` Secret (`TWIGEX_DB_PASSWORD`, sourced from `mariadb.password`), so keep that value in sync with your external DB.
 
 ---
 
@@ -252,10 +320,10 @@ Requirements:
 | `mariadb.mode` | MariaDB topology: `embedded` (default, chart deploys + owns MariaDB + Secret + PVC) / `external` (chart deploys nothing DB-side, point at your pre-existing DB). | string | `"embedded"` |
 | `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. ⚠️ Change for production. **`mariadb.mode=embedded`**: cannot be changed after first boot without reinitializing (data loss). **`mariadb.mode=external`**: rotatable freely. | string | `"mariadb"` |
 | `mariadb.rootPassword` | MariaDB root password. Required for `mariadb.mode=embedded`. Skipped for `mariadb.mode=external`. ⚠️ Change for production. | string | `"mariadbroot"` |
-| `mariadb.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion`. | string | `"11"` |
+| `mariadb.image.tag` | Container image tag (embedded mode only; upstream supports the 10/11 series). Set to `""` to fall back to `Chart.AppVersion`. | string | `"11"` |
 | `mariadb.image.pullPolicy` | Container image pullPolicy. | string | `"IfNotPresent"` |
-| `mariadb.persistence.{size,storageClass,accessModes}` | Embedded MariaDB only. The MariaDB StatefulSet's PVC sizing. | object | see `values.yaml` |
-| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped and the chart reads credentials from `mariadb.existingSecret.{name,keys}`. Classic External Secrets Operator pattern. | bool | `false` |
+| `mariadb.persistence.{size,storageClass,accessModes}` | Embedded MariaDB only. The MariaDB Deployment's PVC sizing (`<release>-mariadb-pvc`). | object | see `values.yaml` |
+| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped and the chart reads credentials from `mariadb.existingSecret.{name,keys}`. Classic External Secrets Operator pattern. No effect in `external` mode (there is no chart-managed Secret to skip). | bool | `false` |
 | `mariadb.existingSecret.name` | Name of the user-managed Secret (or ref) holding `mariadb-password` and `mariadb-root-password`. | string | `""` |
 
 ### External Secret Management
@@ -307,9 +375,9 @@ redis:
 
 The following resources have `helm.sh/resource-policy: keep` to prevent ArgoCD from deleting them during prune/sync:
 - `<release>-twigex` Secret — contains all application secrets
-- `<release>-mariadb` Secret — contains MariaDB credentials
-- `twigex-pvc` — application data
-- `mariadb-pvc` — database data
+- `<release>-mariadb` Secret — contains MariaDB credentials (embedded mode)
+- `<release>-twigex-pvc` — application data
+- `<release>-mariadb-pvc` — database data (embedded mode)
 - RBAC Role and RoleBinding
 
 ### Example ArgoCD Application
@@ -346,7 +414,6 @@ spec:
           office:
             type: collabora   # or eurooffice
         mariadb:
-          enabled: true
           rootPassword: "your-secure-root-password"
           password: "your-secure-mariadb-password"
         redis:
@@ -354,7 +421,7 @@ spec:
             password: "your-redis-password"
   destination:
     server: https://kubernetes.default.svc
-namespace: twigex
+    namespace: twigex
   syncPolicy:
     automated:
       prune: true
@@ -368,9 +435,10 @@ namespace: twigex
 - The chart is published publicly on GHCR — no `imagePullSecrets` or repo credentials required. ArgoCD pulls `oci://ghcr.io/twigex/helm-charts/twigex` anonymously.
 - Pin `targetRevision` to a specific chart version (e.g. `0.0.35`) for reproducible deployments. Avoid floating tags like `latest`.
 - `domain` is the FQDN used for the Twigex app Deployment and TLS Secret name and the cert-manager TLS secret name. Change it to match your host (e.g. `twigex.example.com`).
-- `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). You do **not** need to set `ingress.tls[].secretName`. Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
+- `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
+- To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).
 - `mariadb.password` and `mariadb.rootPassword` are baked into the database on first boot — pick once and don't rotate, or use `mariadb.externalSecret: true` + an external secret manager.
-- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). They cannot be cleared from a user values file — `ingress.annotations: {}` is rejected by Helm as "cannot overwrite table with non table", and `customAnnotations` only **adds** keys, it does not remove or override existing ones. The annotations are cosmetic noise on non-nginx controllers (Traefik ignores them). To get rid of them, patch the chart or add a post-render hook in ArgoCD (`kubectl patch ingress <name> --type=json -p '[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1proxy-body-size"}, ...]'`).
+- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). They cannot be cleared from a user values file — `ingress.annotations: {}` is rejected by Helm as "cannot overwrite table with non table". `ingress.customAnnotations` is merged **on top of** the defaults, so it can add keys and override the two built-in ones, but cannot remove them. On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them). To get rid of them entirely, patch the chart or add a post-render hook in ArgoCD (`kubectl patch ingress <name> --type=json -p '[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1proxy-body-size"}, ...]'`).
 
 ### Encrypt Key Generation
 
@@ -396,3 +464,5 @@ This section lists major and breaking changes of each Helm Chart version.
 Please read them carefully to upgrade successfully, especially the change of the **default database backend**!
 If you miss this, blindly upgrading may delete your MariaDB instance and you may lose your data!
 Always backup `twigex-secret` and `mariadb-secret`.
+
+For the full per-version history, see [CHANGELOG.md](CHANGELOG.md).

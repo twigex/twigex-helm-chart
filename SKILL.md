@@ -11,9 +11,9 @@ Operating procedure for installing, upgrading, configuring, and troubleshooting 
 
 - OCI chart — no `helm repo add` needed.
 - Required for **every** install: `domain`, `twigex.admin.password`, `twigex.server.encryptKey` (32 hex chars, `openssl rand -hex 16`), `redis.auth.password`, `mariadb.password`.
-- Required additionally for modes 1–3: `mariadb.rootPassword` (skip only in mode 4 with `mariadb.externalSecret=true`).
+- Required additionally for embedded mode: `mariadb.rootPassword` (skip with `mariadb.mode=external`).
 - Ingress is **off by default** — must opt in with `ingress.enabled=true`.
-- No CPU/memory requests/limits are set by the chart — add `resources:` blocks yourself for production.
+- Default resource requests/limits exist but are conservative (`twigex.resources`: 100m/256Mi requests, 1 CPU/1Gi limits) — review and raise them for production.
 
 ## Step 1 — Identify the DB mode needed
 
@@ -21,13 +21,13 @@ Ask (or infer from context) which of these fits:
 
 | Mode | When to use | Extra prerequisite |
 |---|---|---|
-| 1. Embedded MariaDB | dev/test, small/medium prod | none |
-| 2. External MariaDB | bring-your-own DB (on/off-cluster, RDS, operator-managed Galera) | pre-created service / endpoint, see below |
+| Embedded MariaDB (default) | dev/test, small/medium prod | none |
+| External MariaDB (`mariadb.mode=external`) | bring-your-own DB (on/off-cluster, RDS, operator-managed Galera) | reachable endpoint + `twigex.db.host`, see below |
 
-For mode 2 (external), the user must pre-create:
-- Secret `<release>-twigex` (see `templates/twigex-secret.yaml` in the chart for keys)
-- If `mariadb.externalSecret=true` is also set, Secret `<release>-mariadb` with keys `mariadb-password`, `mariadb-root-password` (otherwise the chart creates it from `mariadb.password` / `mariadb.rootPassword`)
-- Service `<release>-mariadb` pointing at the external DB on port 3306
+For external mode, the user must ensure:
+- A reachable MariaDB endpoint and set `twigex.db.host` (default `127.0.0.1` is rejected)
+- The `twigex` database and a user matching `twigex.db.user` pre-created in the external DB
+- The DB password kept in sync with `mariadb.password` (the app reads it from the `<release>-twigex` Secret as `TWIGEX_DB_PASSWORD`); `mariadb.externalSecret` has no effect in external mode
 
 ## Step 2 — Run the install
 
@@ -43,7 +43,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
   --set redis.auth.password=your_redis_password
 ```
 
-**`mariadb.mode=external`:** `mariadb.mode=external` and `--set twigex.db.host=...`. `mariadb.rootPassword` is not needed. If your external DB credentials live in a user-managed Secret, also set `mariadb.externalSecret=true` and `mariadb.existingSecret.{name,keys}` so the chart skips the chart-managed Secret and reads from yours.
+**`mariadb.mode=external`:** set `mariadb.mode=external` and `--set twigex.db.host=<endpoint>`. `mariadb.rootPassword` is not needed and `mariadb.externalSecret` has no effect (there is no chart-managed MariaDB Secret in this mode); keep `mariadb.password` in sync with your external DB — the app reads it from the `<release>-twigex` Secret as `TWIGEX_DB_PASSWORD`.
 
 Add ingress if the app needs to be externally reachable:
 ```sh
@@ -66,7 +66,7 @@ kubectl logs -n twigex -l app=<release>-twigex -f
 # If you used mode=external with a mariadb-operator-managed cluster:
 kubectl get mariadb -n twigex
 ```
-Healthy state: twigex pod `Running` and listening on port 3000 (or `twigex.server.port`); `<release>-mariadb-0` and `<release>-redis-master-0` `Running`.
+Healthy state: twigex pod `Running` and listening on port 3000 (or `twigex.server.port`).
 Healthy state — pod names differ by MariaDB mode:
 - **`mariadb.mode=embedded`:** `<release>-mariadb-deployment-<hash>` and `<release>-redis-master-0` `Running`
 - **`mariadb.mode=external`:** no chart-managed MariaDB pods; verify your external DB is reachable. `<release>-redis-master-0` and `<release>-twigex-<hash>` should be `Running`.
