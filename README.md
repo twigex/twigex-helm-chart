@@ -98,18 +98,6 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.config` | Arbitrary `TWIGEX_<KEY>=value` env passthrough (hyphens become underscores) | object | `{}` |
 | `twigex.configFromSecrets` | Same shape, but each value is a `{name, key}` Secret reference | object | `{}` |
 
-### Gateway API (HTTPRoute — alternative to Ingress)
-
-When `gateway.enabled=true`, the chart emits an HTTPRoute instead of an Ingress. Use `gateway:` **or** `ingress:`, not both. The Gateway itself is cluster infrastructure — create it with your Gateway API implementation (Cilium, NGINX Gateway Fabric, Envoy Gateway, …); TLS termination lives on the Gateway listener, so `ingress.certManagerIssuer` / `ingress.tlsExistingSecret` don't apply here.
-
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
-| `gateway.enabled` | Emit an HTTPRoute instead of an Ingress | bool | `false` |
-| `gateway.name` | Name of the existing Gateway to attach to (required when enabled) | string | `""` |
-| `gateway.namespace` | Gateway's namespace (empty = release namespace) | string | `""` |
-| `gateway.sectionName` | Listener `sectionName` to attach to (empty = first listener) | string | `""` |
-| `gateway.annotations` | HTTPRoute annotations | object | `{}` |
-
 ### Cube.js Analytics (optional)
 
 When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker (Deployments + Services), a `cube-config` ConfigMap, and a `cube-secret` Secret, and injects `TWIGEX_COLLIMATO_CUBE_*` env vars into the Twigex app. Required values when enabling (the chart validator hard-fails without them, unless `cube.existingSecret.name` points at a user-managed Secret): `cube.apiSecret` and `cube.callbackSecret` — generate fresh ones per install with `openssl rand -hex 32`.

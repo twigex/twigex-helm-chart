@@ -50,7 +50,7 @@ helm install test . --dry-run \
   --set mariadb.rootPassword=test-root
 ```
 
-If your change touches MariaDB modes, ingress/gateway, or the Cube stack,
+If your change touches MariaDB modes, ingress, or the Cube stack,
 also render those paths (e.g. `--set mariadb.mode=external`,
 `--set ingress.enabled=true,ingress.tls.enabled=true`,
 `--set cube.enabled=true,cube.apiSecret=x,cube.callbackSecret=y`).

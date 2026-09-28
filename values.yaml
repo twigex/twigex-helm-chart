@@ -46,35 +46,6 @@ ingress:
   # cert-manager create one. Mutually exclusive with `certManagerIssuer`.
   tlsExistingSecret: ""
 
-# ──────────────────────────────────────────────────────────────────────────
-# Gateway API (parallel to ingress:; use this OR ingress:, not both)
-# ──────────────────────────────────────────────────────────────────────────
-# When gateway.enabled=true, the chart emits an HTTPRoute that attaches to
-# an existing Gateway. The Gateway itself is cluster infrastructure and is
-# NOT created by this chart — create it via your Gateway API implementation
-# (Cilium, NGINX Gateway Fabric, Envoy Gateway, etc.).
-#
-# TLS termination lives on the Gateway listener, not on the HTTPRoute —
-# `ingress.certManagerIssuer` / `ingress.tlsExistingSecret` are irrelevant
-# in this mode.
-#
-# Cross-namespace route attachment requires a ReferenceGrant in the
-# Gateway's namespace granting this chart's namespace access.
-gateway:
-  enabled: false
-  # Name of the existing Gateway to attach to. REQUIRED when enabled.
-  name: ""
-  # Namespace of the Gateway. Empty = same namespace as the release.
-  namespace: ""
-  # Optional listener sectionName (e.g. "https"). Empty = first listener.
-  sectionName: ""
-  # Optional HTTPRoute annotations (e.g. external-dns, custom metadata).
-  annotations: {}
-
-# ──────────────────────────────────────────────────────────────────────────
-# Twigex app
-# ──────────────────────────────────────────────────────────────────────────
-
 twigex:
   # ── Image ──
   # `tag` empty => uses .Chart.AppVersion (currently "v0.12").

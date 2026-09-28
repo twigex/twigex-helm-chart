@@ -51,18 +51,6 @@ jobs:
             --set ingress.tls.enabled=true \
             --set ingress.certManagerIssuer=letsencrypt
 
-      - name: Render — Gateway API HTTPRoute
-        run: |
-          helm template ci . \
-            --set domain=example.com \
-            --set twigex.admin.password=ci-password \
-            --set twigex.server.encryptKey=000102030405060708090a0b0c0d0e0f \
-            --set redis.auth.password=ci-redis \
-            --set mariadb.password=ci-db \
-            --set mariadb.rootPassword=ci-root \
-            --set gateway.enabled=true \
-            --set gateway.name=public
-
       - name: Render — Cube analytics stack
         run: |
           helm template ci . \
