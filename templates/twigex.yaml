@@ -202,6 +202,8 @@ spec:
               value: "false"
             {{- end }}
             {{- if .Values.twigex.smtp.host }}
+            - name: TWIGEX_SMTP_ENABLED
+              value: {{ .Values.twigex.smtp.enabled | quote }}
             - name: TWIGEX_SMTP_HOST
               value: {{ .Values.twigex.smtp.host | quote }}
             - name: TWIGEX_SMTP_PORT
