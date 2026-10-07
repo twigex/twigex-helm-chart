@@ -3,7 +3,7 @@ name: twigex
 description: A Helm chart for deploying Twigex — the unified workspace for modern businesses.
 type: application
 version: 0.0.35
-appVersion: "v0.14.0-rc2"
+appVersion: "v0.14.0-rc2c"
 # Minimum k8s we test against. Bump when using APIs that require newer.
 kubeVersion: ">=1.24.0-0"
 keywords:
