@@ -3,7 +3,7 @@ name: twigex
 description: A Helm chart for deploying Twigex — the unified workspace for modern businesses.
 type: application
 version: 0.0.35
-appVersion: "v0.14.0-rc2c"
+appVersion: "0.15.0"
 # Minimum k8s we test against. Bump when using APIs that require newer.
 kubeVersion: ">=1.24.0-0"
 keywords:
@@ -40,7 +40,7 @@ annotations:
   artifacthub.io/displayName: "Twigex"
   artifacthub.io/links: |
     - name: OCI Registry
-      url: https://github.com/orgs/twigex/packages/container/package/twigex
+      url: https://github.com/orgs/twigex/packages/container/package/twigex-ee
     - name: Documentation
       url: https://twigex.com
   artifacthub.io/changes: |
