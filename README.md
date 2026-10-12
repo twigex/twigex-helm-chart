@@ -293,7 +293,7 @@ The admin user is created only on first boot when no users exist in the database
 | `redis.enabled` | Enable the Redis subchart entirely | bool | `true` |
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
-| `redis.auth.password` | Redis password. **Used by both the Bitnami Redis subchart and the Twigex app** (via the chart's `twigex-secret.yaml`). | string | `"supersecretpassword"` |
+| `redis.auth.password` | Redis password. **Used by both the Bitnami Redis subchart and the Twigex app** (via the chart's `twigex-secret.yaml`). Required unless `redis.auth.existingSecret` is set. | string | `""` |
 | `redis.master.persistence.enabled` | Enable Redis persistence | bool | `false` |
 | `redis.master.persistence.size` | Redis PVC size (only used when persistence is enabled) | string | `"1Gi"` |
 
@@ -336,8 +336,8 @@ Requirements:
 |------|-------------|------|---------|
 | `mariadb.image.repository` | MariaDB image repository | string | `"mariadb"` |
 | `mariadb.mode` | MariaDB topology: `embedded` (default, chart deploys + owns MariaDB + Secret + PVC) / `external` (chart deploys nothing DB-side, point at your pre-existing DB). | string | `"embedded"` |
-| `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. ⚠️ Change for production. **`mariadb.mode=embedded`**: cannot be changed after first boot without reinitializing (data loss). **`mariadb.mode=external`**: rotatable freely. | string | `"mariadb"` |
-| `mariadb.rootPassword` | MariaDB root password. Required for `mariadb.mode=embedded`. Skipped for `mariadb.mode=external`. ⚠️ Change for production. | string | `"mariadbroot"` |
+| `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. **Required** when `mariadb.mode=embedded` (no default — the validator hard-fails without it). ⚠️ Change for production. **`mariadb.mode=embedded`**: cannot be changed after first boot without reinitializing (data loss). **`mariadb.mode=external`**: rotatable freely. | string | `""` |
+| `mariadb.rootPassword` | MariaDB root password. Required for `mariadb.mode=embedded` (no default — the validator hard-fails without it). Skipped for `mariadb.mode=external`. ⚠️ Change for production. | string | `""` |
 | `mariadb.image.tag` | Container image tag (embedded mode only; upstream supports the 10/11 series). Keep the default `"11"` — an empty tag falls back to `Chart.AppVersion` (the Twigex version), which is not a valid MariaDB tag. | string | `"11"` |
 | `mariadb.image.pullPolicy` | Container image pullPolicy. | string | `"IfNotPresent"` |
 | `mariadb.persistence.{size,storageClass,accessModes}` | Embedded MariaDB only. The MariaDB Deployment's PVC sizing (`<release>-mariadb-pvc`). | object | see `values.yaml` |

@@ -587,7 +587,7 @@ The admin user is created only on first boot when no users exist in the database
 | `redis.enabled` | Enable the Redis subchart entirely | bool | `true` |
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
-| `redis.auth.password` | Redis password. Single source of truth — used by both the Bitnami Redis subchart and the Twigex app (`<release>-twigex` Secret). | string | `"supersecretpassword"` |
+| `redis.auth.password` | Redis password. Single source of truth — used by both the Bitnami Redis subchart and the Twigex app (`<release>-twigex` Secret). Required unless `redis.auth.existingSecret` is set. **Reusing your `twigex.existingSecret` for Redis:** set `redis.auth.existingSecret` to that Secret's name AND `redis.auth.existingSecretPasswordKey` to the key holding the Redis password (the Bitnami subchart mounts key `redis-password` by default, which will not match your Secret's key). | string | `""` |
 | `redis.master.persistence.enabled` | Enable Redis persistence (only used when persistence is enabled) | bool | `false` |
 | `redis.master.persistence.size` | Redis PVC size (only used when persistence is enabled) | string | `"1Gi"` |
 
@@ -595,8 +595,8 @@ The admin user is created only on first boot when no users exist in the database
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. ⚠️ Change for production. **Do NOT change after initial install** with embedded MariaDB — the password is set in the database on first boot and cannot be changed without reinitializing (data loss). | string | `"mariadb"` |
-| `mariadb.rootPassword` | MariaDB root password. ⚠️ Change for production. | string | `"mariadbroot"` |
+| `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. **Required** when `mariadb.mode=embedded` (no default — the validator hard-fails without it). ⚠️ Change for production. **Do NOT change after initial install** with embedded MariaDB — the password is set in the database on first boot and cannot be changed without reinitializing (data loss). | string | `""` |
+| `mariadb.rootPassword` | MariaDB root password. **Required** when `mariadb.mode=embedded` (no default — the validator hard-fails without it). ⚠️ Change for production. | string | `""` |
 | `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped. The Deployment always reads credentials from the Secret named `<release>-mariadb` (keys `mariadb-password`, `mariadb-root-password`) — with this on, create that Secret yourself. | bool | `false` |
 | `mariadb.resources` | CPU/memory requests and limits for the MariaDB container | object | `{requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}` |
 

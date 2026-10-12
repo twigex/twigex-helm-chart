@@ -322,8 +322,8 @@ mariadb:
     repository: mariadb
     tag: "11"             # mariadb upstream (10/11 series supported).
     pullPolicy: IfNotPresent
-  password: "mariadb"
-  rootPassword: "mariadbroot"
+  password: ""              # required when mariadb.mode=embedded (validator enforces). Also the password the Twigex app uses to connect. Do NOT change after first boot (embedded).
+  rootPassword: ""          # required when mariadb.mode=embedded (validator enforces). Used only by the embedded MariaDB container.
 
   resources:
     requests: {cpu: 100m, memory: 256Mi}
@@ -350,7 +350,7 @@ redis:
   architecture: standalone
   auth:
     enabled: true
-    password: "supersecretpassword"
+    password: ""           # required unless redis.auth.existingSecret is set (validator enforces). Used by both the Redis subchart and the Twigex app.
   master:
     persistence:
       enabled: false

@@ -78,9 +78,9 @@
 {{- end -}}
 {{- end -}}
 
-{{/* 8. Redis password required */}}
-{{- if not .Values.redis.auth.password -}}
-{{- fail "redis.auth.password is required" -}}
+{{/* 8. Redis password required (unless the user points at their own Secret) */}}
+{{- if not (or .Values.redis.auth.password .Values.redis.auth.existingSecret) -}}
+{{- fail "redis.auth.password is required (or set redis.auth.existingSecret)" -}}
 {{- end -}}
 
 {{/* 9. MySQL identifiers */}}
