@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/twigex/twigex/main/docs/images/logo.png" alt="Twigex logo" width="110" />
-
 <h1>Twigex Helm Chart</h1>
 
 <p><strong>Deploy Twigex on Kubernetes.</strong><br/>
