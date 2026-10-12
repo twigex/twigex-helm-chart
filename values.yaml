@@ -1,7 +1,7 @@
 # twigex Helm chart — values reference.
 #
 # Sections (in order):
-#   domain / ingress.* / fullnameOverride / nameOverride
+#   domain / ingress.*
 #   twigex.*                — the Twigex app (image, server config, DB/Redis
 #                             connection, SMTP, storage, OAuth/LDAP, admin bootstrap,
 #                             analytics passthrough, pod/deployment/service/network)
@@ -19,12 +19,6 @@
 
 # FQDN of the deployment. Used for the Site URL + Ingress host.
 domain: "example.com"
-
-# Optional: override the resource-name prefix used in K8s metadata.
-fullnameOverride: ""
-
-# Optional: override only the chart-name segment of the fullname.
-nameOverride: ""
 
 ingress:
   enabled: false
@@ -217,7 +211,7 @@ twigex:
     loadBalancerIP: ""
     annotations: {}
 
-  # ── Pod template (all Deployments) ──
+  # ── Pod template (Twigex Deployment only) ──
   pod:
     annotations: {}
     labels: {}
@@ -311,10 +305,12 @@ twigex:
 #   mode: "external"  -> chart deploys no MariaDB resources; twigex.db.host
 #                        must be set to your pre-existing DB endpoint.
 #
-# mariadb.externalSecret: when true, skips the chart-managed Secret and reads
-# creds from mariadb.existingSecret.name (External Secrets Operator pattern;
-# works only with mode=embedded — mode=external doesn't have a chart-managed
-# Secret to skip in the first place).
+# mariadb.externalSecret: when true, skips the chart-managed Secret. The
+# MariaDB Deployment always reads its creds from the Secret named
+# <release>-mariadb (keys: mariadb-password, mariadb-root-password), so when
+# using external secret management, create THAT Secret yourself (External
+# Secrets Operator pattern; works only with mode=embedded — mode=external
+# doesn't have a chart-managed Secret to skip in the first place).
 #
 # mariadb.image: controls the MariaDB image used in embedded mode only.
 # Operators / external DBs use their own image.
@@ -328,11 +324,9 @@ mariadb:
   password: "mariadb"
   rootPassword: "mariadbroot"
 
-  existingSecret:
-    name: ""
-    keys:
-      mariadb-password: "mariadb-password"
-      mariadb-root-password: "mariadb-root-password"
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits:   {cpu: "1",  memory: 1Gi}
 
   persistence:
     size: "1Gi"
@@ -351,6 +345,7 @@ mariadb:
 # `redis.address` and `redis.password` from earlier versions are gone (use the
 # Bitnami-native fields below).
 redis:
+  enabled: true
   architecture: standalone
   auth:
     enabled: true
@@ -421,7 +416,7 @@ cube:
     enabled: true
     minAvailable: 1
 
-  # Secrets — either provide as values (apikey/callbackSecret) or as a
+  # Secrets — either provide as values (apiSecret/callbackSecret) or as a
   # user-managed Secret (set cube.existingSecret.name).
   apiSecret: ""
   callbackSecret: ""

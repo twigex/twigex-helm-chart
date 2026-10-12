@@ -79,8 +79,6 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `domain` | FQDN for the Twigex application | string | `"example.com"` |
-| `fullnameOverride` | Full resource name override | string | `""` |
-| `nameOverride` | Name portion override | string | `""` |
 
 ### Ingress
 
@@ -200,6 +198,7 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `twigex.smtp.enabled` | SMTP feature flag, rendered as `TWIGEX_SMTP_ENABLED` when `smtp.host` is set | bool | `true` |
 | `twigex.smtp.host` | SMTP server host. Empty (default) = all `TWIGEX_SMTP_*` env vars are omitted from the pod, leaving the admin GUI email settings editable; setting it locks the GUI. | string | `""` |
 | `twigex.smtp.port` | SMTP server port | string | `""` |
 | `twigex.smtp.username` | SMTP username | string | `""` |
@@ -342,8 +341,8 @@ Requirements:
 | `mariadb.image.tag` | Container image tag (embedded mode only; upstream supports the 10/11 series). Set to `""` to fall back to `Chart.AppVersion`. | string | `"11"` |
 | `mariadb.image.pullPolicy` | Container image pullPolicy. | string | `"IfNotPresent"` |
 | `mariadb.persistence.{size,storageClass,accessModes}` | Embedded MariaDB only. The MariaDB Deployment's PVC sizing (`<release>-mariadb-pvc`). | object | see `values.yaml` |
-| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped and the chart reads credentials from `mariadb.existingSecret.{name,keys}`. Classic External Secrets Operator pattern. No effect in `external` mode (there is no chart-managed Secret to skip). | bool | `false` |
-| `mariadb.existingSecret.name` | Name of the user-managed Secret (or ref) holding `mariadb-password` and `mariadb-root-password`. | string | `""` |
+| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped. The Deployment always reads credentials from the Secret named `<release>-mariadb` (keys `mariadb-password`, `mariadb-root-password`) — with this on, create that Secret yourself (External Secrets Operator pattern). No effect in `external` mode (there is no chart-managed Secret to skip). | bool | `false` |
+| `mariadb.resources` | CPU/memory requests and limits for the MariaDB container | object | `{requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}` |
 
 ### External Secret Management
 

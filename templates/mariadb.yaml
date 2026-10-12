@@ -1,8 +1,9 @@
 {{/* Embedded MariaDB. Renders when mariadb.mode == "embedded".
 
 When mariadb.externalSecret=true, the chart-managed Secret <release>-mariadb
-is skipped (see templates/mariadb-secret.yaml); the Deployment reads
-creds from mariadb.existingSecret.name in that case.
+is skipped (see templates/mariadb-secret.yaml). The Deployment always reads
+creds from the Secret named <release>-mariadb, so provide that Secret
+yourself (keys: mariadb-password, mariadb-root-password) in that case.
 */}}
 {{- if eq .Values.mariadb.mode "embedded" }}
 
@@ -47,7 +48,7 @@ spec:
               name: {{ .Release.Name }}-mariadb
               key: mariadb-password
         resources:
-          {{- toYaml .Values.twigex.resources | nindent 10 }}
+          {{- toYaml .Values.mariadb.resources | nindent 10 }}
         volumeMounts:
         - name: {{ .Release.Name }}-mariadb-data
           mountPath: /var/lib/mysql

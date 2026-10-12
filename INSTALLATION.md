@@ -419,8 +419,6 @@ Reference of the most common values exposed by `values.yaml`; the full machine-r
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `domain` | FQDN for the Twigex application | string | `"example.com"` |
-| `fullnameOverride` | Full resource name override | string | `""` |
-| `nameOverride` | Name portion override | string | `""` |
 
 ### Ingress
 
@@ -497,6 +495,7 @@ See [Redis Subchart](#redis-subchart) below — Redis is deployed as the Bitnami
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `twigex.smtp.enabled` | SMTP feature flag, rendered as `TWIGEX_SMTP_ENABLED` when `smtp.host` is set | bool | `true` |
 | `twigex.smtp.host` | SMTP server host. Empty (default) = all `TWIGEX_SMTP_*` env vars are omitted from the pod, leaving the admin GUI email settings editable; setting it locks the GUI. | string | `""` |
 | `twigex.smtp.port` | SMTP server port | string | `""` |
 | `twigex.smtp.username` | SMTP username | string | `""` |
@@ -598,7 +597,8 @@ The admin user is created only on first boot when no users exist in the database
 |------|-------------|------|---------|
 | `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. ⚠️ Change for production. **Do NOT change after initial install** with embedded MariaDB — the password is set in the database on first boot and cannot be changed without reinitializing (data loss). | string | `"mariadb"` |
 | `mariadb.rootPassword` | MariaDB root password. ⚠️ Change for production. | string | `"mariadbroot"` |
-| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped and credentials come from `mariadb.existingSecret.{name,keys}`. Classic External Secrets Operator pattern. | bool | `false` |
+| `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped. The Deployment always reads credentials from the Secret named `<release>-mariadb` (keys `mariadb-password`, `mariadb-root-password`) — with this on, create that Secret yourself. | bool | `false` |
+| `mariadb.resources` | CPU/memory requests and limits for the MariaDB container | object | `{requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}` |
 
 ### External Secret Management
 
