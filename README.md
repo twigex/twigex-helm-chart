@@ -8,7 +8,7 @@ The official Helm chart: files, chat and video, projects, and a BI tool, with em
 <p>
 <a href="LICENSE"><img height="20" alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue?style=flat" /></a>
 <a href="https://artifacthub.io/packages/helm/twigex/twigex"><img height="20" alt="Helm chart" src="https://img.shields.io/badge/helm-Artifact%20Hub-417598?style=flat&logo=helm&logoColor=white" /></a>
-<img height="20" alt="Status: pre-1.0" src="https://img.shields.io/badge/status-pre--1.0-orange?style=flat" />
+<a href="#"><img height="20" alt="Status: pre-1.0" src="https://img.shields.io/badge/status-pre--1.0-orange?style=flat" /></a>
 <a href="https://www.twigex.com"><img height="20" alt="Made by Twigex" src="https://img.shields.io/badge/made%20by-Twigex-6f42c1?style=flat" /></a>
 </p>
 
