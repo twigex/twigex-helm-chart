@@ -3,7 +3,7 @@
 # Sections (in order):
 #   domain / ingress.*
 #   twigex.*                — the Twigex app (image, server config, DB/Redis
-#                             connection, SMTP, storage, OAuth/LDAP, admin bootstrap,
+#                             connection, SMTP, storage, LDAP, admin bootstrap,
 #                             analytics passthrough, pod/deployment/service/network)
 #   mariadb.mode            — embedded | external
 #   redis.*                 — Bitnami Redis subchart values (cache)

@@ -585,6 +585,7 @@ The admin user is created only on first boot when no users exist in the database
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `redis.enabled` | Enable the Redis subchart entirely | bool | `true` |
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
 | `redis.auth.password` | Redis password. Single source of truth — used by both the Bitnami Redis subchart and the Twigex app (`<release>-twigex` Secret). | string | `"supersecretpassword"` |

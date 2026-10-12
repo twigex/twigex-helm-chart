@@ -81,7 +81,7 @@ will be requested in review:
 - Update the `## [Unreleased]` section of `CHANGELOG.md` describing the
   change.
 - If you added or changed a values key, document it in the README
-  configuration table (and `values.schema.json` if applicable).
+  configuration table.
 - Fill in the PR template checklist.
 - CI must be green (lint + render across the main value combinations).
 
