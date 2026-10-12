@@ -166,7 +166,7 @@ spec:
                   key: {{ .Values.twigex.existingSecret.keys.TWIGEX_REDIS_PASSWORD | quote }}
             - name: TWIGEX_STORAGE_TYPE
               value: {{ .Values.twigex.storage.type | quote }}
-            {{- if or (eq .Values.twigex.storage.type "s3") (eq .Values.twigex.storage.type "s3compat") }}
+            {{- if eq .Values.twigex.storage.type "s3" }}
             - name: TWIGEX_STORAGE_NAME
               value: {{ .Values.twigex.storage.s3.name | quote }}
             - name: TWIGEX_STORAGE_ENDPOINT

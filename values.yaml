@@ -135,7 +135,7 @@ twigex:
 
   # ── Storage backend (discriminated union) ──
   storage:
-    type: "local"           # local | s3 | s3compat
+    type: "local"           # local | s3
     local:
       name: "Local storage"
     s3:

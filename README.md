@@ -183,16 +183,16 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.storage.type` | Storage type: `local`, `s3`, or `s3compat` | string | `"local"` |
+| `twigex.storage.type` | Storage type: `local` or `s3` (use `s3` for AWS S3 and any S3-compatible endpoint, e.g. MinIO — set `twigex.storage.s3.endpoint` and `twigex.storage.s3.ssl=false` as needed) | string | `"local"` |
 | `twigex.storage.local.name` | Human-readable name for local storage | string | `"Local storage"` |
-| `twigex.storage.s3.name` | Human-readable name for S3 storage (used when type is `s3`/`s3compat`) | string | `"S3 storage"` |
-| `twigex.storage.s3.endpoint` | S3 endpoint (required if type=s3/s3compat) | string | `""` |
-| `twigex.storage.s3.accessKey` | S3 access key (required if type=s3/s3compat) | string | `""` |
-| `twigex.storage.s3.secretKey` | S3 secret key (required if type=s3/s3compat) | string | `""` |
+| `twigex.storage.s3.name` | Human-readable name for S3 storage (used when type is `s3`) | string | `"S3 storage"` |
+| `twigex.storage.s3.endpoint` | S3 endpoint (required if type=s3) | string | `""` |
+| `twigex.storage.s3.accessKey` | S3 access key (required if type=s3) | string | `""` |
+| `twigex.storage.s3.secretKey` | S3 secret key (required if type=s3) | string | `""` |
 | `twigex.storage.s3.bucket` | S3 bucket name | string | `""` |
 | `twigex.storage.s3.ssl` | Use SSL for S3 | bool | `true` |
 
-> **Note:** S3 sub-keys are only passed to the app when `twigex.storage.type` is `s3` or `s3compat`. The access/secret keys are read from the `<release>-twigex` Secret (`TWIGEX_STORAGE_ACCESS_KEY` / `TWIGEX_STORAGE_SECRET_KEY`).
+> **Note:** S3 sub-keys are only passed to the app when `twigex.storage.type` is `s3`. The access/secret keys are read from the `<release>-twigex` Secret (`TWIGEX_STORAGE_ACCESS_KEY` / `TWIGEX_STORAGE_SECRET_KEY`).
 
 ### SMTP
 
