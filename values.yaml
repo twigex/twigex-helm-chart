@@ -23,11 +23,11 @@ domain: "example.com"
 ingress:
   enabled: false
   ingressClassName: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "1100m"
-    nginx.ingress.kubernetes.io/enable-cors: "false"
-  # customAnnotations is merged on top of `annotations`. Use this to add or
-  # override keys without forking the chart.
+  annotations: {}
+  # Recommended for nginx when using large
+  # uploads (app default: 2048 MB public uploads):
+  #   nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
+  # customAnnotations is merged over `annotations`. 
   customAnnotations: {}
 
   tls:
@@ -70,7 +70,7 @@ twigex:
     maxPublicUploadSize: ""
 
   # ── Database connection (consumed by Twigex app, not by MariaDB itself) ──
-  # In modes 1/2/3 the host is auto-derived from the release name.
+  # In embedded mode the host is auto-derived from the release name.
   # host is only consulted when mariadb.mode == "external".
   db:
     port: 3306
@@ -255,7 +255,7 @@ twigex:
 
   # ── PodDisruptionBudget ──
   pdb:
-    enabled: true
+    enabled: false             # default off: with replicas=1 a minAvailable PDB blocks node drains
     minAvailable: 1
     maxUnavailable: ""
 
@@ -267,9 +267,11 @@ twigex:
     imagePullSecrets: []      # for private registries
 
   # ── User-managed Secret (External Secrets Operator pattern) ──
-  # When existingSecret.name is set, the chart-managed Secret is skipped
-  # and these keys are read from the user-managed Secret instead. Required
-  # keys (any subset can be set; defaults match templates/twigex-secret.yaml).
+  # When existingSecret.name is set, the chart does NOT create the
+  # <release>-twigex Secret at all: every secretKeyRef in the app Deployment
+  # points at YOUR Secret, and `keys` remaps the key names (any subset;
+  # defaults match templates/twigex-secret.yaml). encryptKey / admin.password
+  # values are then not required by the validator.
   existingSecret:
     name: ""
     keys:
@@ -342,8 +344,8 @@ mariadb:
 #   <release>-redis-master:6379 via .Release.Name
 #   <release>-twigex Secret key TWIGEX_REDIS_PASSWORD from redis.auth.password
 #
-# `redis.address` and `redis.password` from earlier versions are gone (use the
-# Bitnami-native fields below).
+# The legacy `twigex.redis.address` and `twigex.redis.password` keys are gone
+# (use the Bitnami-native fields below).
 redis:
   enabled: true
   architecture: standalone
@@ -376,7 +378,10 @@ redis:
 #   - cube.callbackSecret — random string, sent back to Twigex on every Cube callback.
 # Generate fresh ones per install. Suggested: `openssl rand -hex 32` for each.
 # Alternatively, manage the Secret yourself and set `cube.existingSecret.name`
-# to point at it; in that case apiSecret/callbackSecret are not required.
+# to point at it; in that case the chart renders no cube Secret at all and
+# apiSecret/callbackSecret are not required. Your Secret must contain the
+# CUBEJS_API_SECRET / CUBE_CALLBACK_SECRET keys (remappable via
+# cube.existingSecret.keys) — cube-api reads it via envFrom.
 cube:
   enabled: false
 
@@ -393,10 +398,8 @@ cube:
   # Per-workload sizing
   api:
     replicas: 1
-    # Port the cube-api Service listens on. Used by Twigex to build
-    # TWIGEX_COLLIMATO_CUBE_API_URL (http://<release>-cube-api:<port>).
-    # NOTE: only Twigex's view of cube-api's port is templated today;
-    # templates/cube-api.yaml still hardcodes 4000 for the Service itself.
+    # Port for the cube-api Service, container, and probes. Used by Twigex to
+    # build TWIGEX_COLLIMATO_CUBE_API_URL (http://<release>-cube-api:<port>).
     service:
       port: 4000
     resources:
@@ -413,7 +416,7 @@ cube:
       limits:   {cpu: "1",  memory: 1Gi}
 
   pdb:
-    enabled: true
+    enabled: false             # default off: all cube workloads are single-replica
     minAvailable: 1
 
   # Secrets — either provide as values (apiSecret/callbackSecret) or as a
@@ -427,8 +430,9 @@ cube:
       CUBEJS_API_SECRET: CUBEJS_API_SECRET
       CUBE_CALLBACK_SECRET: CUBE_CALLBACK_SECRET
 
-  # Override only if Twigex is reached through a different DNS name.
-  # Must be a syntactically valid http(s):// URL when set.
+  # Address Cube uses to call back INTO Twigex (TWIGEX_INTERNAL_URL on the
+  # cube-api pod). Default: http://<release>:<twigex.service.port>/api/internal/cube.
+  # An override replaces the whole URL and MUST end in /api/internal/cube.
   internalUrl: ""
 
   devMode: false

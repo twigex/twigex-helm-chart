@@ -25,7 +25,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      {{- if .Values.twigex.serviceAccount.create }}
+      {{- if or .Values.twigex.serviceAccount.create .Values.twigex.serviceAccount.name }}
       serviceAccountName: {{ .Values.twigex.serviceAccount.name | default (printf "%s-twigex" .Release.Name) | quote }}
       {{- end }}
       {{- with .Values.twigex.serviceAccount.imagePullSecrets }}
@@ -83,8 +83,6 @@ spec:
           volumeMounts:
             - name: shared-pvc
               mountPath: /app/data
-            - name: shared-pvc
-              mountPath: /app/config
           env:
             - name: TWIGEX_ADMIN_NAME
               value: {{ .Values.twigex.admin.name | quote }}

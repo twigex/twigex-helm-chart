@@ -1,5 +1,5 @@
 {{- define "ingress.annotations" -}}
-{{- toYaml (merge .Values.ingress.annotations .Values.ingress.customAnnotations) -}}
+{{- toYaml (mergeOverwrite (deepCopy .Values.ingress.annotations) .Values.ingress.customAnnotations) -}}
 {{- end -}}
 
 {{- define "twigex.mariadbRootPassword" -}}
@@ -24,7 +24,14 @@
 {{- fail (printf "domain %q must be a valid lowercase DNS-1035 / DNS-1123 hostname (RFC 1123)" .Values.domain) -}}
 {{- end -}}
 
-{{/* 2. encryptKey must be 32 hex chars */}}
+{{/* 1b. certManagerIssuer and tlsExistingSecret are mutually exclusive */}}
+{{- if and .Values.ingress.certManagerIssuer .Values.ingress.tlsExistingSecret -}}
+{{- fail "ingress.certManagerIssuer and ingress.tlsExistingSecret are mutually exclusive; set only one" -}}
+{{- end -}}
+
+{{/* 2. encryptKey must be 32 hex chars (not required when the user supplies
+   their own Secret via twigex.existingSecret.name) */}}
+{{- if not .Values.twigex.existingSecret.name -}}
 {{- $key := .Values.twigex.server.encryptKey -}}
 {{- if eq (len $key) 0 -}}
 {{- fail "twigex.server.encryptKey is required. Generate one with: openssl rand -hex 16" -}}
@@ -35,9 +42,10 @@
 {{- if not (regexMatch "^[0-9a-fA-F]{32}$" $key) -}}
 {{- fail (printf "twigex.server.encryptKey must contain only hex characters [0-9a-fA-F] (got %d chars). Generate with: openssl rand -hex 16" (len $key)) -}}
 {{- end -}}
+{{- end -}}{{/* end existingSecret.name guard */}}
 
-{{/* 3. admin password required when admin.enabled and not externalSecret */}}
-{{- if and .Values.twigex.admin.enabled (not .Values.twigex.externalSecret) -}}
+{{/* 3. admin password required when admin.enabled and the chart owns the Secret */}}
+{{- if and .Values.twigex.admin.enabled (not .Values.twigex.externalSecret) (not .Values.twigex.existingSecret.name) -}}
 {{- if not .Values.twigex.admin.password -}}
 {{- fail "twigex.admin.password is required when twigex.admin.enabled=true and twigex.externalSecret=false" -}}
 {{- end -}}

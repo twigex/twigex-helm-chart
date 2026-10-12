@@ -66,8 +66,9 @@ redis:
 #   callbackSecret: CHANGE_ME-openssl-rand-hex-32
 
 # ── Optional: office editing (EuroOffice deployed separately) ─────────────
-# twigex.office:
-#   enabled: true
-#   type: eurooffice
-#   host: https://office.example.com
-#   secret: CHANGE_ME-wopi-secret
+# (nest under the existing twigex: block)
+#   office:
+#     enabled: true
+#     type: eurooffice
+#     host: https://office.example.com
+#     secret: CHANGE_ME-wopi-secret

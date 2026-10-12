@@ -41,7 +41,7 @@ and rotate:
 - `twigex.admin.password`, `mariadb.password`, `mariadb.rootPassword`
 - `redis.auth.password`
 - `cube.apiSecret`, `cube.callbackSecret`
-- Storage / SMTP / LDAP / OAuth credentials (`twigex.storage.*`,
+- Storage / SMTP / LDAP credentials (`twigex.storage.*`,
   `twigex.smtp.*`, `twigex.ldap.*`)
 
 Replace them with obvious placeholders (`CHANGE_ME`, `REDACTED`) before

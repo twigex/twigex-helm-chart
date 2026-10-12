@@ -21,7 +21,7 @@ metadata:
   labels:
     {{- include "twigex.commonLabels" . | nindent 4 }}
 spec:
-  minAvailable: 1
+  minAvailable: {{ .Values.cube.pdb.minAvailable | default 1 }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}-cube-router
@@ -34,7 +34,7 @@ metadata:
   labels:
     {{- include "twigex.commonLabels" . | nindent 4 }}
 spec:
-  minAvailable: 1
+  minAvailable: {{ .Values.cube.pdb.minAvailable | default 1 }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}-cube-worker-1

@@ -27,3 +27,11 @@ Thumbs.db
 
 # Documentation build artifacts
 docs/_build/
+
+# Agent / CI files that must not ship in the chart package
+.github/
+AGENTS.md
+SKILL.md
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md

@@ -37,15 +37,15 @@ spec:
             - name: TWIGEX_INTERNAL_URL
               value: {{ if .Values.cube.internalUrl }}{{ .Values.cube.internalUrl | quote }}{{ else }}{{ printf "http://%s:%d/api/internal/cube" .Release.Name (int .Values.twigex.service.port) | quote }}{{ end }}
           ports:
-            - containerPort: 4000
+            - containerPort: {{ .Values.cube.api.service.port | int }}
           readinessProbe:
             tcpSocket:
-              port: 4000
+              port: {{ .Values.cube.api.service.port | int }}
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
-              port: 4000
+              port: {{ .Values.cube.api.service.port | int }}
             initialDelaySeconds: 30
             periodSeconds: 30
           resources:
@@ -73,6 +73,6 @@ spec:
     app: {{ .Release.Name }}-cube-api
   ports:
     - name: http
-      port: 4000
-      targetPort: 4000
+      port: {{ .Values.cube.api.service.port | int }}
+      targetPort: {{ .Values.cube.api.service.port | int }}
 {{- end -}}

@@ -396,15 +396,14 @@ helm uninstall twigex --namespace twigex
 kubectl delete namespace twigex
 ```
 
-> **Note:** PVCs (`<release>-twigex-pvc`, `<release>-mariadb-pvc`) and Secrets (`<release>-twigex`, `<release>-mariadb`) have `helm.sh/resource-policy: keep` and are NOT deleted by `helm uninstall`. Delete them manually if you want a full cleanup.
+> **Note:** PVCs (`<release>-twigex-pvc`, `<release>-mariadb-pvc`) and Secrets (`<release>-twigex`, `<release>-mariadb`) have `helm.sh/resource-policy: keep` and are NOT deleted by `helm uninstall` — but the `kubectl delete namespace` above **does** delete them, namespace contents included. Keep the PVCs/Secrets by uninstalling without deleting the namespace. The cube Secret and the Bitnami Redis Secret have no keep annotation and are removed by `helm uninstall`.
 
-For a complete wipe:
+For a complete wipe (deletes everything, keep annotations included):
 
 ```sh
 helm uninstall twigex -n twigex
 kubectl delete pvc -n twigex --all
 kubectl delete secret -n twigex <release>-twigex <release>-mariadb
-kubectl delete role,rolebinding -n twigex <release>-twigex 2>/dev/null  # leftovers from chart versions < 0.0.36
 kubectl delete namespace twigex
 ```
 
@@ -443,7 +442,7 @@ Reference of the most common values exposed by `values.yaml`; the full machine-r
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.server.port` | Server listen port (used for the container, Service, and Ingress backend) | int | `3000` |
+| `twigex.server.port` | Server listen port. Rendered as `TWIGEX_SERVER_PORT` and used by the probes — **not** the Service/Ingress port; traffic ports come from `twigex.service.port`/`targetPort`. Changing this alone will break traffic. | int | `3000` |
 | `twigex.server.defaultLocale` | Default UI locale | string | `"en"` |
 | `twigex.server.sessionLengthDays` | Session lifetime in days | int | `30` |
 | `twigex.server.encryptKey` | **Exactly 32 hex characters (16 bytes).** Generate with `openssl rand -hex 16`. The chart fails the install at template-render time if this is missing, the wrong length, or contains non-hex characters. No default — required. ⚠️ Change per-install; immutable in practice once data exists. | string | `""` (required) |

@@ -63,8 +63,6 @@ kubectl get pods -n twigex
 kubectl get svc -n twigex
 kubectl get pods -n twigex --show-labels   # find exact app= label
 kubectl logs -n twigex -l app=<release>-twigex -f
-# If you used mode=external with a mariadb-operator-managed cluster:
-kubectl get mariadb -n twigex
 ```
 Healthy state: twigex pod `Running` and listening on port 3000 (or `twigex.server.port`).
 Healthy state — pod names differ by MariaDB mode:

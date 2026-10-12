@@ -87,7 +87,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `ingress.enabled` | Enable Ingress resource (opt-in; without it, no Ingress is created and the app is reachable only via the `<release>` Service) | bool | `false` |
 | `ingress.ingressClassName` | IngressClass (e.g. `nginx`, `traefik`) | string | `"nginx"` |
 | `ingress.annotations` | Default Ingress annotations | object | See values.yaml |
-| `ingress.customAnnotations` | Additional/overriding annotations | object | `{}` |
+| `ingress.customAnnotations` | Additional annotations, merged **over** the defaults (user values win; set a key to `null` to remove a default) | object | `{}` |
 | `ingress.tls.enabled` | Render the TLS block in the Ingress. When false, the Ingress is HTTP-only. | bool | `false` |
 | `ingress.certManagerIssuer` | Name of an existing cert-manager ClusterIssuer. When set, the chart adds the `cert-manager.io/cluster-issuer` annotation so cert-manager creates the TLS Secret named `<sanitized-domain>`. | string | `""` |
 | `ingress.tlsExistingSecret` | Use an existing Secret for Ingress TLS instead of cert-manager (overrides the `<sanitized-domain>` default name; mutually exclusive with `certManagerIssuer`). | string | `""` |
@@ -116,10 +116,10 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.pod.{annotations,labels,nodeSelector, affinity,tolerations,priorityClassName, terminationGracePeriodSeconds,topologySpreadConstraints, securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
 | `twigex.probes.enabled` | Render liveness/readiness probes (TCP socket on `twigex.server.port`) | bool | `true` |
 | `twigex.probes.{liveness,readiness}.*` | Probe tuning (`initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`) | object | see `values.yaml` |
-| `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment | bool | `true` |
+| `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment. Default `false`: with `replicas: 1` and `minAvailable: 1` the PDB has zero allowed disruptions and blocks node drains. | bool | `false` |
 | `twigex.pdb.minAvailable` | PDB `minAvailable` | int | `1` |
 | `twigex.pdb.maxUnavailable` | PDB `maxUnavailable` (mutually exclusive with `minAvailable`) | string | `""` |
-| `twigex.serviceAccount.create` | Create a ServiceAccount (`<release>-twigex`) | bool | `true` |
+| `twigex.serviceAccount.create` | Create a ServiceAccount (`<release>-twigex`). When `false`, `twigex.serviceAccount.name` (if set) is still used as the pod's ServiceAccount. | bool | `true` |
 | `twigex.serviceAccount.name` | Override the ServiceAccount name | string | `""` |
 | `twigex.serviceAccount.annotations` | ServiceAccount annotations | object | `{}` |
 | `twigex.serviceAccount.imagePullSecrets` | Image pull secrets for private registries | list | `[]` |
@@ -137,20 +137,20 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 | `cube.image.store.{repository,tag,pullPolicy}` | cubestore image (router + workers) | object | `cubejs/cubestore:latest` |
 | `cube.apiSecret` | Shared secret Cube verifies the Twigex JWT against (required unless `cube.existingSecret.name`) | string | `""` |
 | `cube.callbackSecret` | Secret sent back to Twigex on every Cube callback (required unless `cube.existingSecret.name`) | string | `""` |
-| `cube.existingSecret.name` | Use a user-managed Secret (`CUBEJS_API_SECRET`, `CUBE_CALLBACK_SECRET` keys) instead of a chart-managed one | string | `""` |
+| `cube.existingSecret.name` | Use a user-managed Secret instead of a chart-managed one: the chart renders no cube Secret at all, and cube-api reads it via `envFrom` — it must contain `CUBEJS_API_SECRET` and `CUBE_CALLBACK_SECRET` keys (remappable via `cube.existingSecret.keys`) | string | `""` |
 | `cube.api.replicas` | cube-api replicas | int | `1` |
-| `cube.api.service.port` | Port used by Twigex to build `TWIGEX_COLLIMATO_CUBE_API_URL` (note: the cube-api Service itself still hardcodes 4000) | int | `4000` |
+| `cube.api.service.port` | Port for the cube-api Service, container, and probes. Used by Twigex to build `TWIGEX_COLLIMATO_CUBE_API_URL` | int | `4000` |
 | `cube.api/storeRouter/storeWorker.resources` | Per-workload CPU/memory requests and limits | object | see `values.yaml` |
 | `cube.storeWorker.replicas` | cubestore worker replicas | int | `1` |
-| `cube.pdb.{enabled,minAvailable}` | PodDisruptionBudget for Cube workloads | object | `enabled: true, minAvailable: 1` |
-| `cube.internalUrl` | Override the DNS name Twigex uses to reach Cube (must be a valid `http(s)://` URL) | string | `""` |
+| `cube.pdb.{enabled,minAvailable}` | PodDisruptionBudget for Cube workloads (minAvailable applies to all three). Default `enabled: false` — all cube workloads are single-replica, so a `minAvailable: 1` PDB blocks drains. | object | `enabled: false, minAvailable: 1` |
+| `cube.internalUrl` | Address Cube uses to call back into Twigex (`TWIGEX_INTERNAL_URL` on the cube-api pod). Default `http://<release>:<service.port>/api/internal/cube`; an override replaces the whole URL and **must** end in `/api/internal/cube`. | string | `""` |
 | `cube.devMode` | Cube.js dev mode | bool | `false` |
 
 ### Server
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.server.port` | Server listen port (used for the container, Service, and Ingress backend) | int | `3000` |
+| `twigex.server.port` | Server listen port. Rendered as `TWIGEX_SERVER_PORT` and used by the probes — **not** the Service/Ingress port; traffic ports come from `twigex.service.port`/`targetPort`. Changing this alone will break traffic. | int | `3000` |
 | `twigex.server.defaultLocale` | Default UI locale | string | `"en"` |
 | `twigex.server.sessionLengthDays` | Session lifetime in days | int | `30` |
 | `twigex.server.encryptKey` | **Exactly 32 hex characters (16 bytes).** Generate with `openssl rand -hex 16`. The chart fails the install at template-render time if this is missing, the wrong length, or contains non-hex characters. No default — required. ⚠️ Change per-install; immutable in practice once data exists. | string | `""` (required) |
@@ -177,7 +177,7 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 | `twigex.db.connMaxIdleTimeMinutes` | Connection max idle time (minutes) | int | `30` |
 | `twigex.db.queryTimeout` | Query timeout (seconds) | int | `30` |
 
-> **Note:** The database password is controlled by `mariadb.password` (see [MariaDB Configuration](#mariadb-configuration)). Both the MariaDB instance and the Twigex app use the same password via a single source of truth.
+> **Note:** The database password is controlled by `mariadb.password` (see [MariaDB Configuration](#mariadb-configuration)). Both the MariaDB instance and the Twigex app use the same password via a single source of truth — unless `mariadb.externalSecret=true`, in which case your `<release>-mariadb` Secret feeds MariaDB while the app still reads `mariadb.password` from values (they must match; see [External Secret Management](#external-secret-management)).
 
 ### Storage
 
@@ -338,7 +338,7 @@ Requirements:
 | `mariadb.mode` | MariaDB topology: `embedded` (default, chart deploys + owns MariaDB + Secret + PVC) / `external` (chart deploys nothing DB-side, point at your pre-existing DB). | string | `"embedded"` |
 | `mariadb.password` | MariaDB user password. Also used by the Twigex app to connect. ⚠️ Change for production. **`mariadb.mode=embedded`**: cannot be changed after first boot without reinitializing (data loss). **`mariadb.mode=external`**: rotatable freely. | string | `"mariadb"` |
 | `mariadb.rootPassword` | MariaDB root password. Required for `mariadb.mode=embedded`. Skipped for `mariadb.mode=external`. ⚠️ Change for production. | string | `"mariadbroot"` |
-| `mariadb.image.tag` | Container image tag (embedded mode only; upstream supports the 10/11 series). Set to `""` to fall back to `Chart.AppVersion`. | string | `"11"` |
+| `mariadb.image.tag` | Container image tag (embedded mode only; upstream supports the 10/11 series). Keep the default `"11"` — an empty tag falls back to `Chart.AppVersion` (the Twigex version), which is not a valid MariaDB tag. | string | `"11"` |
 | `mariadb.image.pullPolicy` | Container image pullPolicy. | string | `"IfNotPresent"` |
 | `mariadb.persistence.{size,storageClass,accessModes}` | Embedded MariaDB only. The MariaDB Deployment's PVC sizing (`<release>-mariadb-pvc`). | object | see `values.yaml` |
 | `mariadb.externalSecret` | When `true` (and `mariadb.mode=embedded`), the chart-managed `<release>-mariadb` Secret is skipped. The Deployment always reads credentials from the Secret named `<release>-mariadb` (keys `mariadb-password`, `mariadb-root-password`) — with this on, create that Secret yourself (External Secrets Operator pattern). No effect in `external` mode (there is no chart-managed Secret to skip). | bool | `false` |
@@ -359,7 +359,7 @@ Set `twigex.externalSecret: true` and/or `mariadb.externalSecret: true`. The cha
 - `<release>-twigex` — keys: `TWIGEX_ADMIN_PASSWORD`, `TWIGEX_SERVER_ENCRYPT_KEY`, `TWIGEX_DB_PASSWORD`, `TWIGEX_REDIS_PASSWORD`, `TWIGEX_STORAGE_ACCESS_KEY`, `TWIGEX_STORAGE_SECRET_KEY`, `TWIGEX_SMTP_PASSWORD`, `TWIGEX_OFFICE_SECRET`, `TWIGEX_CHANNEL_SECRET`, `TWIGEX_LDAP_BIND_PASSWORD`
 - `<release>-mariadb` — keys: `mariadb-password`, `mariadb-root-password`
 
-Alternatively, `twigex.existingSecret.name` offers a middle path: the chart still creates `<release>-twigex`, but skips per-key population and adds a `twigex.twigex.io/source-secret` annotation referencing your Secret; per-key names can be remapped via `twigex.existingSecret.keys`.
+Alternatively, `twigex.existingSecret.name` fully replaces the chart-managed Secret: no `<release>-twigex` Secret is rendered at all, every `secretKeyRef` in the app Deployment points at **your** Secret, and `twigex.existingSecret.keys` remaps the key names (any subset; defaults match the chart's own key names). When this is set, `twigex.server.encryptKey` and `twigex.admin.password` values are not required by the validator — provide them in your Secret instead.
 
 > **⚠️ Mode `embedded` + ESO:** when you set `mariadb.externalSecret: true` alongside `mariadb.mode=embedded`, the chart skips its own `<release>-mariadb` Secret. You must provide that Secret externally. Its `mariadb-password` key MUST match the `mariadb.password` value, because the Twigex app uses `mariadb.password` (via `twigex-secret.TWIGEX_DB_PASSWORD`) to authenticate. If they drift, the app will fail to connect. In practice, source both from the same ESO Secret.
 
@@ -393,11 +393,15 @@ redis:
 
 ### Resource Policy
 
-The following resources have `helm.sh/resource-policy: keep` to prevent ArgoCD from deleting them during prune/sync:
+The following resources have `helm.sh/resource-policy: keep`, so `helm uninstall` leaves them in place:
 - `<release>-twigex` Secret — contains all application secrets
 - `<release>-mariadb` Secret — contains MariaDB credentials (embedded mode)
 - `<release>-twigex-pvc` — application data
 - `<release>-mariadb-pvc` — database data (embedded mode)
+
+The cube Secret and the Bitnami Redis Secret have **no** keep annotation and are deleted on uninstall.
+
+> **⚠️ ArgoCD users:** Argo CD honors `helm.sh/resource-policy: keep` only like `Delete=false` (protection when the **Application is deleted**). It does **not** protect resources from pruning. With `syncPolicy.automated.prune: true`, a values change that stops rendering a kept resource — e.g. switching `mariadb.mode` from `embedded` to `external` — will cause Argo CD to **prune the `<release>-mariadb` PVC, deleting your database**. To keep such resources under Argo CD, add `argocd.argoproj.io/sync-options: Prune=false` to them (e.g. via a post-render patch) or set `prune: false` before changing the mode.
 
 ### Example ArgoCD Application
 
@@ -431,6 +435,7 @@ spec:
           server:
             encryptKey: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"   # openssl rand -hex 16
           office:
+            enabled: true
             type: collabora   # or eurooffice
             host: https://office.example.com   # required: TWIGEX_OFFICE_* envs are gated on office.host
         mariadb:
@@ -458,7 +463,7 @@ spec:
 - `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
 - To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).
 - `mariadb.password` and `mariadb.rootPassword` are baked into the database on first boot — pick once and don't rotate, or use `mariadb.externalSecret: true` + an external secret manager.
-- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). They cannot be cleared from a user values file — Helm merges maps, so setting `ingress.annotations: {}` leaves the defaults in place. `ingress.customAnnotations` is merged **on top of** the defaults, so it can add keys and override the two built-in ones, but cannot remove them. On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them). To get rid of them entirely, patch the chart or add a post-render hook in ArgoCD (`kubectl patch ingress <name> --type=json -p '[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1proxy-body-size"}, ...]'`).
+- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). `ingress.customAnnotations` is merged **over** the defaults, so it can add keys, override the built-in ones, and remove a default by setting its key to `null`. Setting `ingress.annotations: {}` alone does not clear them (Helm merges maps). On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them).
 
 ### Encrypt Key Generation
 
@@ -487,11 +492,6 @@ Please read them carefully before upgrading, especially the change of the **defa
 If you miss this, blindly upgrading may delete your MariaDB instance and you may lose your data!
 Always backup the `<release>-twigex` and `<release>-mariadb` Secrets.
 
-**0.0.36 — RBAC removed:** the Twigex app makes no Kubernetes API calls
-(now or planned), so the chart no longer creates the `Role` + `RoleBinding`.
-They carried `helm.sh/resource-policy: keep`, so `helm upgrade` will NOT
-remove them — delete manually if present:
-`kubectl delete role,rolebinding -n <namespace> <release>-twigex`
 
 <p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
 
