@@ -293,7 +293,8 @@ twigex:
   #     SOME-THING: "x"    # => TWIGEX_SOME_THING=x
   config: {}
 
-  # Same shape but value comes from a Secret key reference.
+  # Different shape from `config`: each entry is {name: <secret>, key: <secret key>}
+  # → emits TWIGEX_<KEY> from valueFrom.secretKeyRef.
   configFromSecrets: {}
 
 # ──────────────────────────────────────────────────────────────────────────
