@@ -39,7 +39,7 @@ annotations:
   artifacthub.io/license: "MIT"
   artifacthub.io/displayName: "Twigex"
   artifacthub.io/links: |
-    - name: OCI Registry
+    - name: Container image
       url: https://github.com/orgs/twigex/packages/container/package/twigex-ee
     - name: Documentation
       url: https://twigex.com

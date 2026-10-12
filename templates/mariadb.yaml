@@ -79,7 +79,7 @@ metadata:
     "helm.sh/resource-policy": keep
 spec:
   accessModes:
-    - ReadWriteOnce
+    {{- toYaml .Values.mariadb.persistence.accessModes | nindent 4 }}
   resources:
     requests:
       storage: {{ .Values.mariadb.persistence.size | quote }}

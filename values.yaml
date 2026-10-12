@@ -99,6 +99,7 @@ twigex:
   # of env-locked. Set `smtp.host` (and any of the other fields) via `--set` to
   # configure SMTP at install time and lock the GUI.
   smtp:
+    enabled: true             # rendered as TWIGEX_SMTP_ENABLED when smtp.host is set
     host: ""
     port: ""
     username: ""
@@ -314,7 +315,6 @@ twigex:
 # MariaDB — single-discriminator mode
 # ──────────────────────────────────────────────────────────────────────────
 #
-#   mode: "embedded"          -> chart deploys StatefulSet + Service + PVC
 # Two scenarios:
 #   mode: "embedded"  -> chart deploys its own MariaDB Deployment + Secret +
 #                        PVC. The chart owns the DB lifecycle. (Default.)

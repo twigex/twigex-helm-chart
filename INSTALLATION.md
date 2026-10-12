@@ -126,7 +126,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
 
 ### Ingress & TLS
 
-The Ingress is **disabled by default** — the chart only creates the Twigex app Pod, Service, and (optionally) MariaDB / Redis. To expose the app via your ingress controller, opt in explicitly with `ingress.enabled=true`.
+The Ingress is **disabled by default** — the chart creates no Ingress; the Twigex Deployment, Service, PVC, Secrets, RBAC, and PDB are created as usual. To expose the app via your ingress controller, opt in explicitly with `ingress.enabled=true`.
 
 **HTTP-only (no TLS):**
 
@@ -404,7 +404,7 @@ For a complete wipe:
 ```sh
 helm uninstall twigex -n twigex
 kubectl delete pvc -n twigex --all
-kubectl delete secret -n twigex -l app.kubernetes.io/instance=<release>
+kubectl delete secret -n twigex <release>-twigex <release>-mariadb
 kubectl delete namespace twigex
 ```
 
@@ -412,7 +412,7 @@ kubectl delete namespace twigex
 
 ## Configuration
 
-Reference of all values exposed by `values.yaml`. See [Install Twigex](#install-twigex) for the install commands; this section documents what each value does and its default.
+Reference of the most common values exposed by `values.yaml`; the full machine-readable list lives in [values.yaml](values.yaml). See [Install Twigex](#install-twigex) for the install commands; this section documents what each value does and its default.
 
 ### Global
 
@@ -426,7 +426,7 @@ Reference of all values exposed by `values.yaml`. See [Install Twigex](#install-
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `ingress.enabled` | Enable Ingress resource (opt-in; chart creates only the Pod + Service by default) | bool | `false` |
+| `ingress.enabled` | Enable Ingress resource (opt-in; without it, no Ingress is created and the app is reachable only via the `<release>` Service) | bool | `false` |
 | `ingress.ingressClassName` | IngressClass (e.g. `nginx`, `traefik`) | string | `"nginx"` |
 | `ingress.annotations` | Default Ingress annotations | object | See values.yaml |
 | `ingress.customAnnotations` | Additional/overriding annotations | object | `{}` |
@@ -589,8 +589,8 @@ The admin user is created only on first boot when no users exist in the database
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
 | `redis.auth.password` | Redis password. Single source of truth — used by both the Bitnami Redis subchart and the Twigex app (`<release>-twigex` Secret). | string | `"supersecretpassword"` |
-| `redis.master.persistence.enabled` | Enable Redis persistence | bool | `true` |
-| `redis.master.persistence.size` | Redis PVC size | string | `"1Gi"` |
+| `redis.master.persistence.enabled` | Enable Redis persistence (only used when persistence is enabled) | bool | `false` |
+| `redis.master.persistence.size` | Redis PVC size (only used when persistence is enabled) | string | `"1Gi"` |
 
 ### MariaDB Configuration
 

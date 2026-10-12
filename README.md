@@ -66,7 +66,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
   --set redis.auth.password=your_redis_password
 ```
 
-The chart validator fails the install if any of `twigex.server.encryptKey` (exactly 32 hex chars), `mariadb.password`, `mariadb.rootPassword` (embedded mode), or `redis.auth.password` is missing. See [INSTALLATION.md](INSTALLATION.md) for the external-MariaDB, Ingress/TLS, and optional-dependency walkthroughs.
+The chart validator fails the install if `twigex.server.encryptKey` (exactly 32 hex chars) is unset, if `twigex.admin.password` is empty (when admin bootstrap is enabled), or if `mariadb.password`, `mariadb.rootPassword` (embedded mode), or `redis.auth.password` is emptied — these three have insecure defaults, so always override them. It also enforces a valid `domain`, a valid `mariadb.mode`, a non-`127.0.0.1` `twigex.db.host` in external mode, and enum/range checks on strategy, service type, and ports. See [INSTALLATION.md](INSTALLATION.md) for the external-MariaDB, Ingress/TLS, and optional-dependency walkthroughs.
 
 When upgrading, please refer to the [Upgrading](#upgrading) section at the bottom of this document for major and breaking changes.
 
@@ -86,7 +86,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `ingress.enabled` | Enable Ingress resource (opt-in; chart creates only the Pod + Service by default) | bool | `false` |
+| `ingress.enabled` | Enable Ingress resource (opt-in; without it, no Ingress is created and the app is reachable only via the `<release>` Service) | bool | `false` |
 | `ingress.ingressClassName` | IngressClass (e.g. `nginx`, `traefik`) | string | `"nginx"` |
 | `ingress.annotations` | Default Ingress annotations | object | See values.yaml |
 | `ingress.customAnnotations` | Additional/overriding annotations | object | `{}` |
@@ -120,8 +120,10 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.probes.{liveness,readiness}.*` | Probe tuning (`initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`) | object | see `values.yaml` |
 | `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment | bool | `true` |
 | `twigex.pdb.minAvailable` | PDB `minAvailable` | int | `1` |
+| `twigex.pdb.maxUnavailable` | PDB `maxUnavailable` (mutually exclusive with `minAvailable`) | string | `""` |
 | `twigex.serviceAccount.create` | Create a ServiceAccount (`<release>-twigex`) | bool | `true` |
 | `twigex.serviceAccount.name` | Override the ServiceAccount name | string | `""` |
+| `twigex.serviceAccount.annotations` | ServiceAccount annotations | object | `{}` |
 | `twigex.serviceAccount.imagePullSecrets` | Image pull secrets for private registries | list | `[]` |
 | `twigex.rbac.create` | Create the Role + RoleBinding the app needs to manage per-workspace resources at runtime | bool | `true` |
 | `twigex.config` | Arbitrary `TWIGEX_<KEY>=value` env passthrough (hyphens become underscores) | object | `{}` |
@@ -290,6 +292,7 @@ The admin user is created only on first boot when no users exist in the database
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `redis.enabled` | Enable the Redis subchart entirely | bool | `true` |
 | `redis.architecture` | Redis architecture: `standalone` or `replication` | string | `"standalone"` |
 | `redis.auth.enabled` | Enable Redis authentication | bool | `true` |
 | `redis.auth.password` | Redis password. **Used by both the Bitnami Redis subchart and the Twigex app** (via the chart's `twigex-secret.yaml`). | string | `"supersecretpassword"` |
@@ -358,6 +361,8 @@ Set `twigex.externalSecret: true` and/or `mariadb.externalSecret: true`. The cha
 - `<release>-twigex` — keys: `TWIGEX_ADMIN_PASSWORD`, `TWIGEX_SERVER_ENCRYPT_KEY`, `TWIGEX_DB_PASSWORD`, `TWIGEX_REDIS_PASSWORD`, `TWIGEX_STORAGE_ACCESS_KEY`, `TWIGEX_STORAGE_SECRET_KEY`, `TWIGEX_SMTP_PASSWORD`, `TWIGEX_OFFICE_SECRET`, `TWIGEX_CHANNEL_SECRET`, `TWIGEX_LDAP_BIND_PASSWORD`
 - `<release>-mariadb` — keys: `mariadb-password`, `mariadb-root-password`
 
+Alternatively, `twigex.existingSecret.name` offers a middle path: the chart still creates `<release>-twigex`, but skips per-key population and adds a `twigex.twigex.io/source-secret` annotation referencing your Secret; per-key names can be remapped via `twigex.existingSecret.keys`.
+
 > **⚠️ Mode `embedded` + ESO:** when you set `mariadb.externalSecret: true` alongside `mariadb.mode=embedded`, the chart skips its own `<release>-mariadb` Secret. You must provide that Secret externally. Its `mariadb-password` key MUST match the `mariadb.password` value, because the Twigex app uses `mariadb.password` (via `twigex-secret.TWIGEX_DB_PASSWORD`) to authenticate. If they drift, the app will fail to connect. In practice, source both from the same ESO Secret.
 
 ---
@@ -387,8 +392,6 @@ redis:
   auth:
     password: "your-redis-password"               # Also used by the Twigex app to connect to Redis
 ```
-
-> **Note:** The Twigex app's Redis password is sourced from `redis.auth.password` (single source of truth). The `twigex.redis.password` value is deprecated and ignored.
 
 ### Resource Policy
 
@@ -453,11 +456,11 @@ spec:
 **Notes:**
 - The chart is published publicly on GHCR — no `imagePullSecrets` or repo credentials required. ArgoCD pulls `oci://ghcr.io/twigex/helm-charts/twigex` anonymously.
 - Pin `targetRevision` to a specific chart version (e.g. `0.0.35`) for reproducible deployments. Avoid floating tags like `latest`.
-- `domain` is the FQDN used for the Twigex app Deployment and TLS Secret name and the cert-manager TLS secret name. Change it to match your host (e.g. `twigex.example.com`).
+- `domain` is the FQDN used for the app's Site URL, the Ingress host, and the TLS Secret name (resource names like the `<release>-twigex` Deployment derive from the release name). Change it to match your host (e.g. `twigex.example.com`).
 - `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
 - To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).
 - `mariadb.password` and `mariadb.rootPassword` are baked into the database on first boot — pick once and don't rotate, or use `mariadb.externalSecret: true` + an external secret manager.
-- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). They cannot be cleared from a user values file — `ingress.annotations: {}` is rejected by Helm as "cannot overwrite table with non table". `ingress.customAnnotations` is merged **on top of** the defaults, so it can add keys and override the two built-in ones, but cannot remove them. On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them). To get rid of them entirely, patch the chart or add a post-render hook in ArgoCD (`kubectl patch ingress <name> --type=json -p '[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1proxy-body-size"}, ...]'`).
+- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). They cannot be cleared from a user values file — Helm merges maps, so setting `ingress.annotations: {}` leaves the defaults in place. `ingress.customAnnotations` is merged **on top of** the defaults, so it can add keys and override the two built-in ones, but cannot remove them. On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them). To get rid of them entirely, patch the chart or add a post-render hook in ArgoCD (`kubectl patch ingress <name> --type=json -p '[{"op":"remove","path":"/metadata/annotations/nginx.ingress.kubernetes.io~1proxy-body-size"}, ...]'`).
 
 ### Encrypt Key Generation
 
@@ -481,10 +484,10 @@ application deployed by this chart is licensed separately under
 
 ## Upgrading
 
-This section lists major and breaking changes of each Helm Chart version.
-Please read them carefully to upgrade successfully, especially the change of the **default database backend**!
+Breaking changes are documented per chart version in [CHANGELOG.md](CHANGELOG.md).
+Please read them carefully before upgrading, especially the change of the **default database backend**!
 If you miss this, blindly upgrading may delete your MariaDB instance and you may lose your data!
-Always backup `twigex-secret` and `mariadb-secret`.
+Always backup the `<release>-twigex` and `<release>-mariadb` Secrets.
 
 <p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
 
@@ -492,4 +495,4 @@ For the full per-version history, see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-Copyright (c) 2022 Twigex, SIA. This Helm chart is licensed under [MIT](LICENSE); the Twigex application deployed by it is licensed separately under the [GNU Affero General Public License v3.0 only](https://github.com/twigex/twigex/blob/main/LICENSE).
+Copyright (c) 2026 Twigex. This Helm chart is licensed under [MIT](LICENSE); the Twigex application deployed by it is licensed separately under the [GNU Affero General Public License v3.0 only](https://github.com/twigex/twigex/blob/main/LICENSE).

@@ -15,11 +15,11 @@ All notable changes to this chart are documented here. The format follows
   PR template, CI workflow (`lint-render.yaml`: lint + render across
   embedded/external MariaDB, ingress/TLS, and Cube paths),
   release workflow (`release.yaml`: tag-guarded `helm push` to
-  GHCR), `artifacthub-repo.yml` (repositoryID TODO until the repo is
-  registered on Artifact Hub), and `examples/values-prod-example.yaml`
+  GHCR), `artifacthub-repo.yml` (repositoryID set — registered on
+  Artifact Hub), and `examples/values-prod-example.yaml`
   (secret-free production values: ingress + cert-manager TLS +
   external MariaDB). Fixed `artifacthub.io/license` annotation:
-  Apache-2.0 → MIT, matching `LICENSE.txt`.
+  Apache-2.0 → MIT, matching `LICENSE`.
 
 ### Fixed
 
