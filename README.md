@@ -69,7 +69,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex` |
+| `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex-ee` |
 | `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `v0.14.0-rc2`). | string | `""` |
 | `twigex.image.pullPolicy` | Container image pullPolicy | string | `IfNotPresent` |
 

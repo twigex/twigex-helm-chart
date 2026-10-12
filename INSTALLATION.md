@@ -438,7 +438,7 @@ Reference of all values exposed by `values.yaml`. See [Install Twigex](#install-
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex` |
+| `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex-ee` |
 | `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `v0.14.0-rc2`). | string | `""` |
 
 ### Server
