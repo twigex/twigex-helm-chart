@@ -438,8 +438,8 @@ Reference of all values exposed by `values.yaml`. See [Install Twigex](#install-
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `twigex.image.repository` | Container image repository | string | `ghcr.io/twigex/twigex-ee` |
-| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `v0.14.0-rc2`). | string | `""` |
+| `twigex.image.repository` | Container image repository. Default is the pre-built EE image with enterprise features; for the fully open-source build, build the container from source, push it to your own registry, and set this value. | string | `ghcr.io/twigex/twigex-ee` |
+| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `0.15.0`). | string | `""` |
 
 ### Server
 
