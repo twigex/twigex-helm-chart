@@ -272,16 +272,6 @@ twigex:
     annotations: {}
     imagePullSecrets: []      # for private registries
 
-  # ── RBAC ──
-  # The twigex app manages per-workspace Kubernetes resources at runtime
-  # (StatefulSets, Services, ConfigMaps, Pods) via an in-cluster client-go
-  # connection. The chart creates a Role + RoleBinding in the release
-  # namespace granting the minimum verbs needed by the current twigex
-  # release. Widen `rules` in templates/twigex-role.yaml when future
-  # twigex releases require additional resources.
-  rbac:
-    create: true
-
   # ── User-managed Secret (External Secrets Operator pattern) ──
   # When existingSecret.name is set, the chart-managed Secret is skipped
   # and these keys are read from the user-managed Secret instead. Required
@@ -375,8 +365,8 @@ redis:
 # ──────────────────────────────────────────────────────────────────────────
 #
 # When cube.enabled=true, the chart deploys:
-#   - cube-secret   (Secret with CUBEJS_API_SECRET, CUBE_CALLBACK_SECRET,
-#                    CUBEJS_DB_TYPE — required when cube.enabled=true, unless
+#   - cube-secret   (Secret with CUBEJS_API_SECRET, CUBE_CALLBACK_SECRET —
+#                    required when cube.enabled=true, unless
 #                    cube.existingSecret.name points at a user-managed Secret)
 #   - cube-config   (ConfigMap with the cube.js file)
 #   - cube-api      (Deployment + Service, port 4000)

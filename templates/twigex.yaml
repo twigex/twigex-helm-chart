@@ -352,9 +352,6 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.twigex.service.type }}
-  {{- if and (eq .Values.twigex.service.type "NodePort") .Values.twigex.service.nodePort }}
-  nodePort: {{ .Values.twigex.service.nodePort | int }}
-  {{- end }}
   {{- with .Values.twigex.service.loadBalancerIP }}
   loadBalancerIP: {{ . | quote }}
   {{- end }}
@@ -364,3 +361,6 @@ spec:
     - name: http
       port: {{ .Values.twigex.service.port | int }}
       targetPort: {{ .Values.twigex.service.targetPort | int }}
+      {{- if and (eq .Values.twigex.service.type "NodePort") .Values.twigex.service.nodePort }}
+      nodePort: {{ .Values.twigex.service.nodePort | int }}
+      {{- end }}

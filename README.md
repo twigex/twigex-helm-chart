@@ -113,7 +113,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.service.port` | Service port | int | `3000` |
 | `twigex.service.targetPort` | Container port targeted by the Service | int | `3000` |
 | `twigex.service.nodePort` | NodePort (required if `type=NodePort`, range 30000–32767) | string | `""` |
-| `twigex.service.loadBalancerIP` | Static LB IP (LoadBalancer only) | string | `""` |
+| `twigex.service.loadBalancerIP` | Static LB IP (LoadBalancer only; deprecated upstream since Kubernetes 1.24) | string | `""` |
 | `twigex.service.annotations` | Service annotations | object | `{}` |
 | `twigex.pod.{annotations,labels,nodeSelector, affinity,tolerations,priorityClassName, terminationGracePeriodSeconds,topologySpreadConstraints, securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
 | `twigex.probes.enabled` | Render liveness/readiness probes (TCP socket on `twigex.server.port`) | bool | `true` |
@@ -125,7 +125,6 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.serviceAccount.name` | Override the ServiceAccount name | string | `""` |
 | `twigex.serviceAccount.annotations` | ServiceAccount annotations | object | `{}` |
 | `twigex.serviceAccount.imagePullSecrets` | Image pull secrets for private registries | list | `[]` |
-| `twigex.rbac.create` | Create the Role + RoleBinding the app needs to manage per-workspace resources at runtime | bool | `true` |
 | `twigex.config` | Arbitrary `TWIGEX_<KEY>=value` env passthrough (hyphens become underscores) | object | `{}` |
 | `twigex.configFromSecrets` | Same shape, but each value is a `{name, key}` Secret reference | object | `{}` |
 
@@ -400,7 +399,6 @@ The following resources have `helm.sh/resource-policy: keep` to prevent ArgoCD f
 - `<release>-mariadb` Secret — contains MariaDB credentials (embedded mode)
 - `<release>-twigex-pvc` — application data
 - `<release>-mariadb-pvc` — database data (embedded mode)
-- RBAC Role and RoleBinding
 
 ### Example ArgoCD Application
 
@@ -435,6 +433,7 @@ spec:
             encryptKey: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"   # openssl rand -hex 16
           office:
             type: collabora   # or eurooffice
+            host: https://office.example.com   # required: TWIGEX_OFFICE_* envs are gated on office.host
         mariadb:
           rootPassword: "your-secure-root-password"
           password: "your-secure-mariadb-password"
@@ -488,6 +487,12 @@ Breaking changes are documented per chart version in [CHANGELOG.md](CHANGELOG.md
 Please read them carefully before upgrading, especially the change of the **default database backend**!
 If you miss this, blindly upgrading may delete your MariaDB instance and you may lose your data!
 Always backup the `<release>-twigex` and `<release>-mariadb` Secrets.
+
+**0.0.36 — RBAC removed:** the Twigex app makes no Kubernetes API calls
+(now or planned), so the chart no longer creates the `Role` + `RoleBinding`.
+They carried `helm.sh/resource-policy: keep`, so `helm upgrade` will NOT
+remove them — delete manually if present:
+`kubectl delete role,rolebinding -n <namespace> <release>-twigex`
 
 <p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
 

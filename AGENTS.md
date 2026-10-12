@@ -76,14 +76,14 @@ kubectl get pods -n twigex
 kubectl get svc -n twigex
 kubectl logs -n twigex -l app=<release>-twigex -f
 ```
-`<release>-twigex` = the `domain` value with dots replaced by dashes.
+`<release>-twigex` = the Helm release name plus the `-twigex` suffix (e.g. release `twigex` → `twigex-twigex`).
 
 ### Uninstall
 ```sh
 helm uninstall twigex --namespace twigex
 kubectl delete namespace twigex
 ```
-Note: PVCs, Secrets, Role, and RoleBinding have `helm.sh/resource-policy: keep` and survive `helm uninstall` by design — don't "clean these up" automatically unless the user explicitly asks for a full wipe.
+Note: PVCs and Secrets have `helm.sh/resource-policy: keep` and survive `helm uninstall` by design — don't "clean these up" automatically unless the user explicitly asks for a full wipe.
 
 ## Testing / validation expectations
 

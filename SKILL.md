@@ -82,7 +82,7 @@ The twigex pod label is `app=<release>-twigex`; the Twigex app Service is always
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `helm install` fails at template render, encryptKey error | `twigex.server.encryptKey` missing, wrong length, or non-hex | Must be exactly 32 hex chars: `openssl rand -hex 16` |
-| App can't reach DB/Redis after changing release name | Service addresses are auto-derived from release name | Use `--name twigex` (default) or update all downstream refs to match new `<release>-*` names |
+| App can't reach DB/Redis after changing release name | Service addresses are auto-derived from release name | Install with the default release name `twigex` or update all downstream refs to match new `<release>-*` names |
 | Office editing fails to load / WOPI errors | Office server's alias/allow-list doesn't include the Twigex domain, or domain unreachable from browsers | Check `aliasgroup1` (or equivalent) on EuroOffice/Collabora side |
 | Voice/video (Channel) not connecting | LiveKit not installed, or `twigex.channel.host`/key/secret misconfigured | Verify LiveKit server is up and reachable at the configured `ws://` URL |
 | Upgrade breaks DB connectivity | Breaking change in DB backend defaults between chart versions | Read the chart Changelog before bumping `--version` |

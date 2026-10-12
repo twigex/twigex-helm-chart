@@ -30,7 +30,7 @@ This guide covers installing the Twigex Helm chart and its optional dependencies
 
 - **cert-manager** with a ClusterIssuer (recommended for TLS)
 
-> **Note:** Service addresses (Redis, MariaDB) are auto-derived from the Helm release name — `<release>-redis-master:6379` for Redis and `<release>-mariadb` for MariaDB. If you install with `--name twigex`, addresses become `twigex-redis-master:6379` and `twigex-mariadb`. Any release name works — Twigex derives them automatically. If you use a different release name, the app's env vars are auto-derived and should resolve correctly without any extra configuration.
+> **Note:** Service addresses (Redis, MariaDB) are auto-derived from the Helm release name — `<release>-redis-master:6379` for Redis and `<release>-mariadb` for MariaDB. With the default release name `twigex`, addresses are `twigex-redis-master:6379` and `twigex-mariadb`. Any release name works — Twigex derives them automatically. If you use a different release name, the app's env vars are auto-derived and should resolve correctly without any extra configuration.
 
 ---
 
@@ -126,7 +126,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
 
 ### Ingress & TLS
 
-The Ingress is **disabled by default** — the chart creates no Ingress; the Twigex Deployment, Service, PVC, Secrets, RBAC, and PDB are created as usual. To expose the app via your ingress controller, opt in explicitly with `ingress.enabled=true`.
+The Ingress is **disabled by default** — the chart creates no Ingress; the Twigex Deployment, Service, PVC, Secrets, and PDB are created as usual. To expose the app via your ingress controller, opt in explicitly with `ingress.enabled=true`.
 
 **HTTP-only (no TLS):**
 
@@ -360,11 +360,10 @@ kubectl get pods -n twigex
 kubectl get svc -n twigex
 
 # Tail application logs.
-# The twigex pod label is `app: <release>-twigex`, where <release>-twigex is your
-# `domain` value with dots replaced by dashes (e.g. domain: twigex.example.com → app=twigex-example-com).
+# The twigex pod label is `app: <release>-twigex`, derived from the Helm
+# release name (e.g. release `twigex` → app=twigex-twigex).
 # To find the exact label value, run: kubectl get pods -n twigex --show-labels
 kubectl logs -n twigex -l app=<release>-twigex -f
-# Example: kubectl logs -n twigex -l app=example-com -f
 # Or, more robustly, by pod name:
 #   POD=$(kubectl get pod -n twigex -l app=<release>-twigex -o jsonpath='{.items[0].metadata.name}')
 #   kubectl logs -n twigex "$POD" -f
@@ -405,6 +404,7 @@ For a complete wipe:
 helm uninstall twigex -n twigex
 kubectl delete pvc -n twigex --all
 kubectl delete secret -n twigex <release>-twigex <release>-mariadb
+kubectl delete role,rolebinding -n twigex <release>-twigex 2>/dev/null  # leftovers from chart versions < 0.0.36
 kubectl delete namespace twigex
 ```
 
