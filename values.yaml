@@ -23,11 +23,10 @@ domain: "example.com"
 ingress:
   enabled: false
   ingressClassName: "nginx"
-  annotations: {}
-  # Recommended for nginx when using large
-  # uploads (app default: 2048 MB public uploads):
-  #   nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
-  # customAnnotations is merged over `annotations`. 
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"  # matches the app's 2048 MB public-upload limit
+  # customAnnotations is merged over `annotations` (user values win). Null-removal
+  # of defaults works only via `annotations` in a values file, not via customAnnotations.
   customAnnotations: {}
 
   tls:
@@ -380,8 +379,9 @@ redis:
 # Alternatively, manage the Secret yourself and set `cube.existingSecret.name`
 # to point at it; in that case the chart renders no cube Secret at all and
 # apiSecret/callbackSecret are not required. Your Secret must contain the
-# CUBEJS_API_SECRET / CUBE_CALLBACK_SECRET keys (remappable via
-# cube.existingSecret.keys) — cube-api reads it via envFrom.
+# CUBEJS_API_SECRET / CUBE_CALLBACK_SECRET key names — cube-api reads the
+# Secret via envFrom, so the remapping in cube.existingSecret.keys applies
+# only to Twigex's secretKeyRefs, not to cube-api itself.
 cube:
   enabled: false
 

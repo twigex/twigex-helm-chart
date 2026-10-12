@@ -87,7 +87,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `ingress.enabled` | Enable Ingress resource (opt-in; without it, no Ingress is created and the app is reachable only via the `<release>` Service) | bool | `false` |
 | `ingress.ingressClassName` | IngressClass (e.g. `nginx`, `traefik`) | string | `"nginx"` |
 | `ingress.annotations` | Default Ingress annotations | object | See values.yaml |
-| `ingress.customAnnotations` | Additional annotations, merged **over** the defaults (user values win; set a key to `null` to remove a default) | object | `{}` |
+| `ingress.customAnnotations` | Additional annotations, merged **over** `annotations` (user values win) | object | `{}` |
 | `ingress.tls.enabled` | Render the TLS block in the Ingress. When false, the Ingress is HTTP-only. | bool | `false` |
 | `ingress.certManagerIssuer` | Name of an existing cert-manager ClusterIssuer. When set, the chart adds the `cert-manager.io/cluster-issuer` annotation so cert-manager creates the TLS Secret named `<sanitized-domain>`. | string | `""` |
 | `ingress.tlsExistingSecret` | Use an existing Secret for Ingress TLS instead of cert-manager (overrides the `<sanitized-domain>` default name; mutually exclusive with `certManagerIssuer`). | string | `""` |
@@ -137,7 +137,7 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 | `cube.image.store.{repository,tag,pullPolicy}` | cubestore image (router + workers) | object | `cubejs/cubestore:latest` |
 | `cube.apiSecret` | Shared secret Cube verifies the Twigex JWT against (required unless `cube.existingSecret.name`) | string | `""` |
 | `cube.callbackSecret` | Secret sent back to Twigex on every Cube callback (required unless `cube.existingSecret.name`) | string | `""` |
-| `cube.existingSecret.name` | Use a user-managed Secret instead of a chart-managed one: the chart renders no cube Secret at all, and cube-api reads it via `envFrom` — it must contain `CUBEJS_API_SECRET` and `CUBE_CALLBACK_SECRET` keys (remappable via `cube.existingSecret.keys`) | string | `""` |
+| `cube.existingSecret.name` | Use a user-managed Secret instead of a chart-managed one: the chart renders no cube Secret at all. cube-api reads it via `envFrom`, so it **must contain the literal key names** `CUBEJS_API_SECRET` and `CUBE_CALLBACK_SECRET` (the `cube.existingSecret.keys` remap applies only to the Twigex `secretKeyRef`s) | string | `""` |
 | `cube.api.replicas` | cube-api replicas | int | `1` |
 | `cube.api.service.port` | Port for the cube-api Service, container, and probes. Used by Twigex to build `TWIGEX_COLLIMATO_CUBE_API_URL` | int | `4000` |
 | `cube.api/storeRouter/storeWorker.resources` | Per-workload CPU/memory requests and limits | object | see `values.yaml` |
@@ -463,7 +463,7 @@ spec:
 - `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
 - To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).
 - `mariadb.password` and `mariadb.rootPassword` are baked into the database on first boot — pick once and don't rotate, or use `mariadb.externalSecret: true` + an external secret manager.
-- The chart bakes nginx-specific annotations into its `values.yaml` defaults (`nginx.ingress.kubernetes.io/proxy-body-size`, `nginx.ingress.kubernetes.io/enable-cors`). `ingress.customAnnotations` is merged **over** the defaults, so it can add keys, override the built-in ones, and remove a default by setting its key to `null`. Setting `ingress.annotations: {}` alone does not clear them (Helm merges maps). On non-nginx controllers the annotations are cosmetic noise (Traefik ignores them).
+- The chart ships one nginx annotation by default: `nginx.ingress.kubernetes.io/proxy-body-size: "2048m"`, matching the app's 2048 MB public-upload limit (without it, ingress-nginx defaults to 1 MB and large uploads get 413). Override or remove it via `ingress.annotations` in your values file (set the key to `null` to remove); `ingress.customAnnotations` can add or override keys, but null-removal does not work through it. On non-nginx controllers the annotation is cosmetic noise (Traefik ignores it).
 
 ### Encrypt Key Generation
 
