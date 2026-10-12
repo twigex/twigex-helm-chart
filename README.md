@@ -1,21 +1,50 @@
-# Twigex Helm Chart
+<div align="center">
 
-See the [official documentation](https://twigex.com/en/Installation) for setup details.
+<img src="https://raw.githubusercontent.com/twigex/twigex/main/docs/images/logo.png" alt="Twigex logo" width="110" />
+
+<h1>Twigex Helm Chart</h1>
+
+<p><strong>Deploy Twigex on Kubernetes.</strong><br/>
+The official Helm chart: files, chat and video, projects, and a BI tool, with embedded or external MariaDB, Redis, LiveKit and office editing.</p>
+
+<p>
+<a href="LICENSE"><img height="20" alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue?style=flat" /></a>
+<a href="https://artifacthub.io/packages/helm/twigex/twigex"><img height="20" alt="Helm chart" src="https://img.shields.io/badge/helm-Artifact%20Hub-417598?style=flat&logo=helm&logoColor=white" /></a>
+<img height="20" alt="Status: pre-1.0" src="https://img.shields.io/badge/status-pre--1.0-orange?style=flat" />
+<a href="https://www.twigex.com"><img height="20" alt="Made by Twigex" src="https://img.shields.io/badge/made%20by-Twigex-6f42c1?style=flat" /></a>
+</p>
+
+<p>
+<a href="#installing"><strong>Quick start</strong></a> ·
+<a href="https://demo.twigex.com/"><strong>Live demo</strong></a> ·
+<a href="https://twigex.com/"><strong>Docs</strong></a>
+</p>
+
+</div>
+
+---
+
+> [!NOTE]
+> Try it right now, with no signup and no setup: **[demo.twigex.com](https://demo.twigex.com/)**,
+> username `twigex`, password `twigex`. The demo resets every 30 minutes, so don't put anything real in it.
 
 More info about the project:
 
 - [https://twigex.com](https://twigex.com)
 - [https://www.reddit.com/r/twigex/](https://reddit.com/r/twigex)
 
-**Demo:** [Try Twigex in your browser!](https://demo.twigex.com) (Don't post personal stuff. Resets every 30 minutes.)
+> [!IMPORTANT]
+> This Helm chart is in active development and has **not reached 1.0**. It is used in production, but features and configuration may still change between releases.
 
-Username: `twigex`
+## Table of contents
 
-Password: `twigex`
-
-## ⚠️ Note: This Helm Chart is under active development.
-Features and configurations may change as we continue to improve it.
-Feel free to try it out, but please use it with care.
+- [Prerequisites](#prerequisites)
+- [Installing](#installing)
+  - [Default (embedded MariaDB)](#default-embedded-mariadb)
+- [Configuration](#configuration)
+- [ArgoCD Deployment](#argocd-deployment)
+- [License](#license)
+- [Upgrading](#upgrading)
 
 ## Prerequisites
 
@@ -42,6 +71,8 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
 The chart validator fails the install if any of `twigex.server.encryptKey` (exactly 32 hex chars), `mariadb.password`, `mariadb.rootPassword` (embedded mode), or `redis.auth.password` is missing. See [INSTALLATION.md](INSTALLATION.md) for the external-MariaDB, Ingress/TLS, and optional-dependency walkthroughs.
 
 When upgrading, please refer to the [Upgrading](#upgrading) section at the bottom of this document for major and breaking changes.
+
+<p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
 
 ## Configuration
 
@@ -333,6 +364,8 @@ Set `twigex.externalSecret: true` and/or `mariadb.externalSecret: true`. The cha
 
 ---
 
+<p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
+
 ## ArgoCD Deployment
 
 This chart is compatible with ArgoCD. It does **not** use `lookup()` or random password generation — all passwords must be explicitly set in values.
@@ -438,9 +471,11 @@ This produces a 32-character hex string suitable for `twigex.server.encryptKey`.
 
 ---
 
+<p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
+
 ## License
 
-This Helm chart is licensed under [MIT](LICENSE.txt). The Twigex
+This Helm chart is licensed under [MIT](LICENSE). The Twigex
 application deployed by this chart is licensed separately under
 [AGPL-3.0](https://github.com/twigex/twigex/blob/main/LICENSE).
 
@@ -453,4 +488,10 @@ Please read them carefully to upgrade successfully, especially the change of the
 If you miss this, blindly upgrading may delete your MariaDB instance and you may lose your data!
 Always backup `twigex-secret` and `mariadb-secret`.
 
+<p align="right"><a href="#twigex-helm-chart">Back to top</a></p>
+
 For the full per-version history, see [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+Copyright (c) 2022 Twigex, SIA. This Helm chart is licensed under [MIT](LICENSE); the Twigex application deployed by it is licensed separately under the [GNU Affero General Public License v3.0 only](https://github.com/twigex/twigex/blob/main/LICENSE).
