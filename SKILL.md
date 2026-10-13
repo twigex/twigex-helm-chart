@@ -33,7 +33,7 @@ For external mode, the user must ensure:
 
 **`mariadb.mode=embedded`** (default):
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
