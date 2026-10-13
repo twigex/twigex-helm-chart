@@ -15,7 +15,7 @@ The official Helm chart: files, chat and video, projects, and a BI tool, with em
 <p>
 <a href="#installing"><strong>Quick start</strong></a> ·
 <a href="https://demo.twigex.com/"><strong>Live demo</strong></a> ·
-<a href="https://twigex.com/"><strong>Docs</strong></a>
+<a href="https://twigex.com/docs"><strong>Docs</strong></a>
 </p>
 
 </div>
