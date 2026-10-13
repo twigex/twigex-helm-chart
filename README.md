@@ -56,7 +56,7 @@ More info about the project:
 ### Default (embedded MariaDB)
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -418,7 +418,7 @@ spec:
   source:
     repoURL: oci://ghcr.io/twigex/helm-charts
     chart: twigex
-    targetRevision: 0.0.35
+    targetRevision: 0.0.36
     helm:
       releaseName: twigex
       valuesObject:
@@ -458,7 +458,7 @@ spec:
 
 **Notes:**
 - The chart is published publicly on GHCR — no `imagePullSecrets` or repo credentials required. ArgoCD pulls `oci://ghcr.io/twigex/helm-charts/twigex` anonymously.
-- Pin `targetRevision` to a specific chart version (e.g. `0.0.35`) for reproducible deployments. Avoid floating tags like `latest`.
+- Pin `targetRevision` to a specific chart version (e.g. `0.0.36`) for reproducible deployments. Avoid floating tags like `latest`.
 - `domain` is the FQDN used for the app's Site URL, the Ingress host, and the TLS Secret name (resource names like the `<release>-twigex` Deployment derive from the release name). Change it to match your host (e.g. `twigex.example.com`).
 - `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
 - To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).

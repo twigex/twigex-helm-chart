@@ -89,7 +89,7 @@ These are required regardless of which MariaDB backend you pick:
 A bundled MariaDB instance is deployed as a single Pod inside the chart. Simplest option, suitable for small/medium deployments.
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -111,7 +111,7 @@ Requirements:
 - An existing `twigex` database (the MySQL identifier — the app expects this DB name) (the chart does **not** create it — create it ahead of time, e.g. `CREATE DATABASE twigex CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`)
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -131,7 +131,7 @@ The Ingress is **disabled by default** — the chart creates no Ingress; the Twi
 **HTTP-only (no TLS):**
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -148,7 +148,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
 Requires a `ClusterIssuer` named `letsencrypt-prod` to already exist in the cluster (create it once per cluster per the cert-manager docs). The chart only adds the annotation — cert-manager creates the Secret on first request to the Ingress.
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -380,7 +380,7 @@ Expected healthy state:
 ## Upgrading
 
 ```sh
-helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.35 \
+helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
   --namespace twigex \
   -f your-values.yaml
 ```

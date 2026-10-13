@@ -10,7 +10,7 @@ Twigex is deployed with a Helm chart published as an OCI artifact:
 oci://ghcr.io/twigex/helm-charts/twigex
 ```
 
-No `helm repo add` is needed — it's pulled directly by OCI reference and version tag (e.g. `--version 0.0.35`).
+No `helm repo add` is needed — it's pulled directly by OCI reference and version tag (e.g. `--version 0.0.36`).
 
 Stack components (all optional except Twigex + one DB mode + Redis):
 
