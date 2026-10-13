@@ -1,0 +1,6 @@
+# Artifact Hub repository metadata.
+# https://artifacthub.io/docs/topics/repositories/helm-charts/
+repositoryID: d552c025-88dd-4b11-b338-8aa972fb0c2e
+owners:
+  - name: Twigex
+    email: support@twigex.com

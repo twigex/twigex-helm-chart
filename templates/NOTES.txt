@@ -1,0 +1,25 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release name is: {{ .Release.Name }}
+Your namespace is:    {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+
+The application is exposed via an Ingress resource.
+
+
+{{- else }}
+
+The application is not using Ingress.
+A Kubernetes Service is available instead.
+
+
+
+{{- end }}
+
+Chart version: {{ .Chart.Version }}
+App version:   {{ .Chart.AppVersion }}
+
+
+Thank you for using {{ .Chart.Name }}!
+

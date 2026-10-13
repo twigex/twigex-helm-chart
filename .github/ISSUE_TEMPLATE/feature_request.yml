@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a new capability or values key for the chart
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to achieve that the chart can't do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        Ideal: the exact values key(s) you'd expect (e.g. `twigex.resources.limits`)
+        and what they should change in the rendered resources.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How do you solve this today (customAnnotations, config passthrough, post-install kubectl...)?
+    validations:
+      required: false

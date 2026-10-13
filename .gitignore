@@ -1,0 +1,32 @@
+# This is a Helm chart — no application source. Most build artifacts are
+# ignored at the chart root for clarity; the chart directory itself
+# should still be committed in full.
+
+# ── Helmlint and structural checks ──
+.helmlint/
+helm-test-output/
+
+# ── Local / personal config (NEVER commit) ──
+.kube/
+.kubeconfig
+*.local.yaml
+*.local.yml
+
+# ── External Secrets Operator support files ──
+secrets/
+.sops.yaml
+
+# ── IDE / editor scratch ──
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Test scratch / scratch render output ──
+test-results/
+coverage/
+__pycache__/
+
+# ── OS ──
+.DS_Store
+Thumbs.db

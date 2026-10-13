@@ -1,0 +1,19 @@
+{{- if .Values.twigex.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-twigex
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "twigex.commonLabels" . | nindent 4 }}
+spec:
+  {{- if .Values.twigex.pdb.minAvailable }}
+  minAvailable: {{ .Values.twigex.pdb.minAvailable }}
+  {{- end }}
+  {{- if .Values.twigex.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.twigex.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-twigex
+{{- end -}}
