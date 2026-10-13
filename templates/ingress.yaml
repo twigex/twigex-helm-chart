@@ -1,0 +1,38 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    {{- include "ingress.annotations" . | nindent 4 }}
+    {{- if .Values.ingress.certManagerIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManagerIssuer | quote }}
+    {{- end }}
+  name: {{ .Release.Name }}-twigex
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Release.Name }}
+            port:
+              number: {{ .Values.twigex.service.port }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.domain }}
+    {{- if .Values.ingress.tlsExistingSecret }}
+    # Use a pre-existing TLS Secret instead of the chart-managed default.
+    secretName: {{ .Values.ingress.tlsExistingSecret | quote }}
+    {{- else }}
+    secretName: {{ .Values.domain | replace "." "-" }}
+    {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,65 @@
+{{- if .Values.cube.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-cube-router
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-router
+    app.kubernetes.io/component: cube-router
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-router
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-cube-router
+        app.kubernetes.io/component: cube-router
+    spec:
+      containers:
+        - name: cubestore-router
+          image: "{{ .Values.cube.image.store.repository }}:{{ .Values.cube.image.store.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.cube.image.store.pullPolicy }}
+          env:
+            - name: CUBESTORE_SERVER_NAME
+              value: "{{ .Release.Name }}-cube-router:9999"
+            - name: CUBESTORE_META_PORT
+              value: "9999"
+            - name: CUBESTORE_WORKERS
+              value: "{{ .Release.Name }}-cube-worker-1:9001"
+            - name: CUBESTORE_REMOTE_DIR
+              value: "/cube/data"
+          ports:
+            - containerPort: 9999
+            - containerPort: 3030
+          resources:
+            {{- toYaml .Values.cube.storeRouter.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /cube/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-cube-router
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-router
+spec:
+  selector:
+    app: {{ .Release.Name }}-cube-router
+  ports:
+    - name: meta
+      port: 9999
+      targetPort: 9999
+    - name: ws
+      port: 3030
+      targetPort: 3030
+{{- end -}}

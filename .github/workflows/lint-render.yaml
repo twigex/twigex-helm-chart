@@ -1,0 +1,70 @@
+name: Lint & render
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Lint
+        run: helm lint .
+
+      - name: Render — default values
+        run: |
+          helm template ci . \
+            --set domain=example.com \
+            --set twigex.admin.password=ci-password \
+            --set twigex.server.encryptKey=000102030405060708090a0b0c0d0e0f \
+            --set redis.auth.password=ci-redis \
+            --set mariadb.password=ci-db \
+            --set mariadb.rootPassword=ci-root
+
+      - name: Render — external MariaDB
+        run: |
+          helm template ci . \
+            --set domain=example.com \
+            --set twigex.admin.password=ci-password \
+            --set twigex.server.encryptKey=000102030405060708090a0b0c0d0e0f \
+            --set redis.auth.password=ci-redis \
+            --set mariadb.mode=external \
+            --set twigex.db.host=mariadb.example.internal
+
+      - name: Render — ingress + cert-manager TLS
+        run: |
+          helm template ci . \
+            --set domain=example.com \
+            --set twigex.admin.password=ci-password \
+            --set twigex.server.encryptKey=000102030405060708090a0b0c0d0e0f \
+            --set redis.auth.password=ci-redis \
+            --set mariadb.password=ci-db \
+            --set mariadb.rootPassword=ci-root \
+            --set ingress.enabled=true \
+            --set ingress.tls.enabled=true \
+            --set ingress.certManagerIssuer=letsencrypt
+
+      - name: Render — Cube analytics stack
+        run: |
+          helm template ci . \
+            --set domain=example.com \
+            --set twigex.admin.password=ci-password \
+            --set twigex.server.encryptKey=000102030405060708090a0b0c0d0e0f \
+            --set redis.auth.password=ci-redis \
+            --set mariadb.password=ci-db \
+            --set mariadb.rootPassword=ci-root \
+            --set cube.enabled=true \
+            --set cube.apiSecret=ci-api-secret \
+            --set cube.callbackSecret=ci-callback-secret
+
+      - name: Verify chart packages cleanly (dependency resolved)
+        run: |
+          helm dependency update .
+          test -f charts/redis-27.0.17.tgz

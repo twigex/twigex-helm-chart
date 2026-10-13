@@ -1,0 +1,439 @@
+# twigex Helm chart — values reference.
+#
+# Sections (in order):
+#   domain / ingress.*
+#   twigex.*                — the Twigex app (image, server config, DB/Redis
+#                             connection, SMTP, storage, LDAP, admin bootstrap,
+#                             analytics passthrough, pod/deployment/service/network)
+#   mariadb.mode            — embedded | external
+#   redis.*                 — Bitnami Redis subchart values (cache)
+#   cube.*                  — Cube.js analytics backend (optional)
+#
+# Production secrets: never commit real values. Use --set, a git-ignored values
+# file, or an external secrets manager (Vault / External Secrets Operator).
+# See AGENTS.md rules 1-3 for the immutable/one-time-set fields.
+
+# ──────────────────────────────────────────────────────────────────────────
+# Chart-wide
+# ──────────────────────────────────────────────────────────────────────────
+
+# FQDN of the deployment. Used for the Site URL + Ingress host.
+domain: "example.com"
+
+ingress:
+  enabled: false
+  ingressClassName: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"  # matches the app's 2048 MB public-upload limit
+  # customAnnotations is merged over `annotations` (user values win). Null-removal
+  # of defaults works only via `annotations` in a values file, not via customAnnotations.
+  customAnnotations: {}
+
+  tls:
+    enabled: false
+  # Name of an existing cert-manager ClusterIssuer. When set the chart adds the
+  # `cert-manager.io/cluster-issuer` annotation and trusts cert-manager to create
+  # the TLS Secret named after the sanitized `domain` (e.g. `example-com`).
+  certManagerIssuer: ""
+  # When set, use this existing Secret for Ingress TLS instead of letting
+  # cert-manager create one. Mutually exclusive with `certManagerIssuer`.
+  tlsExistingSecret: ""
+
+twigex:
+  # ── Image ──
+  # `tag` empty => uses .Chart.AppVersion (currently "0.15.0").
+  # Default image is Twigex EE (pre-built, includes enterprise features).
+  # For the fully open-source build, build the container from source, push it
+  # to your own registry, and point twigex.image.repository at it.
+  image:
+    repository: ghcr.io/twigex/twigex-ee
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  # ── Server ──
+  server:
+    port: 3000
+    defaultLocale: "en"
+    sessionLengthDays: 30
+    # CHANGE FOR PRODUCTION. Exactly 32 hex chars (16 bytes / 128 bits).
+    # Generate: openssl rand -hex 16
+    # ⚠ Immutable in practice — rotating invalidates encrypted data in DB.
+    encryptKey: ""
+    tlsCertFile: ""
+    tlsKeyFile: ""
+    # Comma-separated lists passed to the app as TWIGEX_TRUSTED_PROXIES /
+    # TWIGEX_TRUSTED_PROXY_HEADERS. Empty list = env omitted (app default).
+    trustedProxies: []        # e.g. ["10.0.0.0/8", "192.168.0.0/16"]
+    trustedProxyHeaders: []   # e.g. ["X-Forwarded-For", "X-Real-IP"]
+    # Max public (share-link) upload size in MB. Empty = app default (2048 MB).
+    maxPublicUploadSize: ""
+
+  # ── Database connection (consumed by Twigex app, not by MariaDB itself) ──
+  # In embedded mode the host is auto-derived from the release name.
+  # host is only consulted when mariadb.mode == "external".
+  db:
+    port: 3306
+    user: "twigex"           # MySQL identifier — must match what the Go image expects
+    name: "twigex"           # MySQL database identifier
+    driver: "mysql"
+    readTimeout: "30s"
+    writeTimeout: "30s"
+    maxOpenConns: 25
+    maxIdleConns: 10
+    connMaxLifetimeMinutes: 60
+    connMaxIdleTimeMinutes: 30
+    queryTimeout: 30
+    # Only used when mariadb.mode == "external".
+    host: "127.0.0.1"
+
+  # ── SMTP ──
+  # SMTP env vars are gated on `smtp.host`. When unset, the TWIGEX_SMTP_* envs are
+  # omitted from the pod so the admin GUI email settings panel is editable instead
+  # of env-locked. Set `smtp.host` (and any of the other fields) via `--set` to
+  # configure SMTP at install time and lock the GUI.
+  smtp:
+    enabled: true             # rendered as TWIGEX_SMTP_ENABLED when smtp.host is set
+    host: ""
+    port: ""
+    username: ""
+    password: ""
+    security: ""
+    authEnabled: false
+    fromAddress: ""
+    fromName: ""
+    replyTo: ""
+
+  # ── Office (EuroOffice / Collabora; both expose WOPI) ──
+  # Office env vars are gated on `office.host`. When unset, the TWIGEX_OFFICE_*
+  # envs are omitted from the pod so the admin GUI office settings panel is
+  # editable instead of env-locked. Set `office.host` via `--set` to configure
+  # Office at install time and lock the GUI.
+  office:
+    enabled: false
+    type: ""
+    host: ""
+    secret: ""
+
+  # ── Channel (LiveKit; configured client side only — server deployed separately) ──
+  # Channel env vars are gated on whether the feature is actually configured:
+  #   - Video:     `channel.host`           → if unset, the TWIGEX_CHANNEL_{ENABLED,HOST,KEY,SECRET}
+  #                                          envs are omitted so the GUI admin can edit them
+  #                                          instead of being env-locked.
+  #   - LinkPrev:  `channel.linkPreviews`    → same pattern for TWIGEX_CHANNEL_LINK_PREVIEWS.
+  #   - GIF:       `channel.gif.enabled`     → same pattern for TWIGEX_CHANNEL_GIF_*.
+  # Set these via `--set` to install LiveKit values via Helm; leave them empty/false
+  # to manage them from the admin GUI.
+  channel:
+    enabled: false
+    host: ""
+    key: ""
+    secret: ""
+    linkPreviews: false
+    gif:
+      enabled: false
+      apiKey: ""
+
+  # ── Storage backend (discriminated union) ──
+  storage:
+    type: "local"           # local | s3
+    local:
+      name: "Local storage"
+    s3:
+      name: "S3 storage"
+      endpoint: ""
+      bucket: ""
+      accessKey: ""
+      secretKey: ""
+      ssl: true
+
+
+  # ── LDAP ──
+  # LDAP env vars are gated on `ldap.host`. When unset, the TWIGEX_LDAP_*
+  # envs are omitted from the pod so the admin GUI auth settings panel is
+  # editable instead of env-locked. Set `ldap.host` (and any of the other
+  # fields) via `--set` to configure LDAP at install time and lock the GUI.
+  ldap:
+    enabled: false
+    # host: "ldap.example.com"
+    # baseDN: "dc=example,dc=com"
+    # bindDN: "cn=admin,dc=example,dc=com"
+    host: ""
+    port: 389
+    baseDN: ""
+    bindDN: ""
+    bindPassword: ""
+    connectionSecurity: ""
+    caCert: ""
+    insecureSkipVerify: false
+    timeoutSeconds: ""
+    userFilter: "(uid={0})"
+    usernameAttr: ""
+    idAttr: "uid"
+    firstNameAttr: "givenName"
+    lastNameAttr: "sn"
+    emailAttr: "mail"
+    syncEnabled: false
+    syncIntervalMinutes: ""
+    syncMaxDeactivatePercent: ""
+    allowedGroups: ""
+
+  # ── Admin bootstrap (first boot only) ──
+  admin:
+    enabled: true
+    name: "Admin"
+    lastName: "User"
+    username: "admin"
+    email: "admin@example.com"
+    password: "admin"
+
+  # When true the chart expects <release>-twigex Secret to be provided
+  # externally (e.g. via External Secrets Operator).
+  externalSecret: false
+
+  license: ""
+
+  # ── Persistence (the Twigex app PVC) ──
+  persistence:
+    size: "2Gi"
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    labels: {}
+
+  # ── Service ──
+  service:
+    type: ClusterIP            # ClusterIP | NodePort | LoadBalancer
+    port: 3000                 # service.port
+    targetPort: 3000           # container port targeted by the Service
+    nodePort: ""               # required if type=NodePort (30000-32767)
+    loadBalancerIP: ""
+    annotations: {}
+
+  # ── Pod template (Twigex Deployment only) ──
+  pod:
+    annotations: {}
+    labels: {}
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+    priorityClassName: ""
+    terminationGracePeriodSeconds: 60
+    topologySpreadConstraints: []
+    # Empty / omitted by default; templates gate on truthiness.
+    # Set to a non-empty map to apply.
+    securityContext: null
+    containerSecurityContext: null
+
+  # ── Workload sizing ──
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits:   {cpu: "1",  memory: 1Gi}
+
+  # ── Replicas / strategy ──
+  replicas: 1
+  strategy: Recreate          # Recreate | RollingUpdate
+
+  # ── Probes ──
+  # The Twigex image exposes a /healthz path on the server port. Override
+  # via probes.{liveness,readiness}.path if upstream changes the path.
+  probes:
+    enabled: true
+    liveness:
+      path: /healthz
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 5
+    readiness:
+      path: /healthz
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+  # ── PodDisruptionBudget ──
+  pdb:
+    enabled: false             # default off: with replicas=1 a minAvailable PDB blocks node drains
+    minAvailable: 1
+    maxUnavailable: ""
+
+  # ── ServiceAccount + image pull secrets ──
+  serviceAccount:
+    create: true
+    name: ""                  # default = <release>-twigex
+    annotations: {}
+    imagePullSecrets: []      # for private registries
+
+  # ── User-managed Secret (External Secrets Operator pattern) ──
+  # When existingSecret.name is set, the chart does NOT create the
+  # <release>-twigex Secret at all: every secretKeyRef in the app Deployment
+  # points at YOUR Secret, and `keys` remaps the key names (any subset;
+  # defaults match templates/twigex-secret.yaml). encryptKey / admin.password
+  # values are then not required by the validator.
+  existingSecret:
+    name: ""
+    keys:
+      TWIGEX_ADMIN_PASSWORD: TWIGEX_ADMIN_PASSWORD
+      TWIGEX_SERVER_ENCRYPT_KEY: TWIGEX_SERVER_ENCRYPT_KEY
+      TWIGEX_DB_PASSWORD: TWIGEX_DB_PASSWORD
+      TWIGEX_REDIS_PASSWORD: TWIGEX_REDIS_PASSWORD
+      TWIGEX_STORAGE_ACCESS_KEY: TWIGEX_STORAGE_ACCESS_KEY
+      TWIGEX_STORAGE_SECRET_KEY: TWIGEX_STORAGE_SECRET_KEY
+      TWIGEX_SMTP_PASSWORD: TWIGEX_SMTP_PASSWORD
+      TWIGEX_OFFICE_SECRET: TWIGEX_OFFICE_SECRET
+      TWIGEX_CHANNEL_SECRET: TWIGEX_CHANNEL_SECRET
+      TWIGEX_LDAP_BIND_PASSWORD: TWIGEX_LDAP_BIND_PASSWORD
+
+  # ── Arbitrary TWIGEX_* env-var passthrough ──
+  # Maps an arbitrary key to a literal value injected as TWIGEX_<KEY>.
+  # Hyphens uppercased to underscores.
+  #   config:
+  #     FOO_BAR: "hello"   # => TWIGEX_FOO_BAR=hello
+  #     SOME-THING: "x"    # => TWIGEX_SOME_THING=x
+  config: {}
+
+  # Different shape from `config`: each entry is {name: <secret>, key: <secret key>}
+  # → emits TWIGEX_<KEY> from valueFrom.secretKeyRef.
+  configFromSecrets: {}
+
+# ──────────────────────────────────────────────────────────────────────────
+# MariaDB — single-discriminator mode
+# ──────────────────────────────────────────────────────────────────────────
+#
+# Two scenarios:
+#   mode: "embedded"  -> chart deploys its own MariaDB Deployment + Secret +
+#                        PVC. The chart owns the DB lifecycle. (Default.)
+#   mode: "external"  -> chart deploys no MariaDB resources; twigex.db.host
+#                        must be set to your pre-existing DB endpoint.
+#
+# mariadb.externalSecret: when true, skips the chart-managed Secret. The
+# MariaDB Deployment always reads its creds from the Secret named
+# <release>-mariadb (keys: mariadb-password, mariadb-root-password), so when
+# using external secret management, create THAT Secret yourself (External
+# Secrets Operator pattern; works only with mode=embedded — mode=external
+# doesn't have a chart-managed Secret to skip in the first place).
+#
+# mariadb.image: controls the MariaDB image used in embedded mode only.
+# Operators / external DBs use their own image.
+mariadb:
+  mode: "embedded"          # embedded | external
+  externalSecret: false
+  image:
+    repository: mariadb
+    tag: "11"             # mariadb upstream (10/11 series supported).
+    pullPolicy: IfNotPresent
+  password: ""              # required when mariadb.mode=embedded (validator enforces). Also the password the Twigex app uses to connect. Do NOT change after first boot (embedded).
+  rootPassword: ""          # required when mariadb.mode=embedded (validator enforces). Used only by the embedded MariaDB container.
+
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits:   {cpu: "1",  memory: 1Gi}
+
+  persistence:
+    size: "1Gi"
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+# ──────────────────────────────────────────────────────────────────────────
+# Redis (Bitnami subchart)
+# ──────────────────────────────────────────────────────────────────────────
+#
+# Chart reads:
+#   <release>-redis-master:6379 via .Release.Name
+#   <release>-twigex Secret key TWIGEX_REDIS_PASSWORD from redis.auth.password
+#
+# The legacy `twigex.redis.address` and `twigex.redis.password` keys are gone
+# (use the Bitnami-native fields below).
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: ""           # required unless redis.auth.existingSecret is set (validator enforces). Used by both the Redis subchart and the Twigex app.
+  master:
+    persistence:
+      enabled: false
+      size: 1Gi
+
+# ──────────────────────────────────────────────────────────────────────────
+# Cube.js analytics (optional)
+# ──────────────────────────────────────────────────────────────────────────
+#
+# When cube.enabled=true, the chart deploys:
+#   - cube-secret   (Secret with CUBEJS_API_SECRET, CUBE_CALLBACK_SECRET —
+#                    required when cube.enabled=true, unless
+#                    cube.existingSecret.name points at a user-managed Secret)
+#   - cube-config   (ConfigMap with the cube.js file)
+#   - cube-api      (Deployment + Service, port 4000)
+#   - cube-router   (Deployment + Service, port 9999, cubestore)
+#   - cube-worker-1 (Deployment + Service, port 9001, cubestore)
+#
+# The Twigex Deployment also gets three TWIGEX_COLLIMATO_CUBE_* env vars.
+#
+# Required values when cube.enabled=true (the chart validator hard-fails
+# without them, or upgrade fails with `secret "<release>-cube-secret" not found`):
+#   - cube.apiSecret      — random string, shared secret that Cube verifies the JWT from Twigex against.
+#   - cube.callbackSecret — random string, sent back to Twigex on every Cube callback.
+# Generate fresh ones per install. Suggested: `openssl rand -hex 32` for each.
+# Alternatively, manage the Secret yourself and set `cube.existingSecret.name`
+# to point at it; in that case the chart renders no cube Secret at all and
+# apiSecret/callbackSecret are not required. Your Secret must contain the
+# CUBEJS_API_SECRET / CUBE_CALLBACK_SECRET key names — cube-api reads the
+# Secret via envFrom, so the remapping in cube.existingSecret.keys applies
+# only to Twigex's secretKeyRefs, not to cube-api itself.
+cube:
+  enabled: false
+
+  image:
+    api:
+      repository: cubejs/cube
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    store:
+      repository: cubejs/cubestore
+      tag: "latest"
+      pullPolicy: IfNotPresent
+
+  # Per-workload sizing
+  api:
+    replicas: 1
+    # Port for the cube-api Service, container, and probes. Used by Twigex to
+    # build TWIGEX_COLLIMATO_CUBE_API_URL (http://<release>-cube-api:<port>).
+    service:
+      port: 4000
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits:   {cpu: "1",  memory: 1Gi}
+  storeRouter:
+    resources:
+      requests: {cpu: 100m, memory: 512Mi}
+      limits:   {cpu: "1",  memory: 1Gi}
+  storeWorker:
+    replicas: 1
+    resources:
+      requests: {cpu: 100m, memory: 512Mi}
+      limits:   {cpu: "1",  memory: 1Gi}
+
+  pdb:
+    enabled: false             # default off: all cube workloads are single-replica
+    minAvailable: 1
+
+  # Secrets — either provide as values (apiSecret/callbackSecret) or as a
+  # user-managed Secret (set cube.existingSecret.name).
+  apiSecret: ""
+  callbackSecret: ""
+
+  existingSecret:
+    name: ""
+    keys:
+      CUBEJS_API_SECRET: CUBEJS_API_SECRET
+      CUBE_CALLBACK_SECRET: CUBE_CALLBACK_SECRET
+
+  # Address Cube uses to call back INTO Twigex (TWIGEX_INTERNAL_URL on the
+  # cube-api pod). Default: http://<release>:<twigex.service.port>/api/internal/cube.
+  # An override replaces the whole URL and MUST end in /api/internal/cube.
+  internalUrl: ""
+
+  devMode: false

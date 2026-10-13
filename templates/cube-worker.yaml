@@ -1,0 +1,70 @@
+{{- if .Values.cube.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-cube-worker-1
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-worker-1
+    app.kubernetes.io/component: cube-worker
+spec:
+  replicas: {{ .Values.cube.storeWorker.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-cube-worker-1
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-cube-worker-1
+        app.kubernetes.io/component: cube-worker
+    spec:
+      initContainers:
+        - name: wait-for-router
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until nc -z {{ .Release.Name }}-cube-router 9999; do echo waiting for cube-router; sleep 2; done
+      containers:
+        - name: cubestore-worker
+          image: "{{ .Values.cube.image.store.repository }}:{{ .Values.cube.image.store.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.cube.image.store.pullPolicy }}
+          env:
+            - name: CUBESTORE_SERVER_NAME
+              value: "{{ .Release.Name }}-cube-worker-1:9001"
+            - name: CUBESTORE_WORKER_PORT
+              value: "9001"
+            - name: CUBESTORE_META_ADDR
+              value: "{{ .Release.Name }}-cube-router:9999"
+            - name: CUBESTORE_WORKERS
+              value: "{{ .Release.Name }}-cube-worker-1:9001"
+            - name: CUBESTORE_REMOTE_DIR
+              value: "/cube/data"
+          ports:
+            - containerPort: 9001
+          resources:
+            {{- toYaml .Values.cube.storeWorker.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /cube/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-cube-worker-1
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-cube-worker-1
+spec:
+  selector:
+    app: {{ .Release.Name }}-cube-worker-1
+  ports:
+    - name: worker
+      port: 9001
+      targetPort: 9001
+{{- end -}}

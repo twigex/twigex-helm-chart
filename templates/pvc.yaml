@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-twigex-pvc
+  labels:
+    app.kubernetes.io/name: twigex
+    {{- with .Values.twigex.persistence.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    "helm.sh/resource-policy": keep
+    {{- with .Values.twigex.persistence.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- range .Values.twigex.persistence.accessModes }}
+    - {{ . }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.twigex.persistence.size }}
+  {{- if .Values.twigex.persistence.storageClass }}
+  storageClassName: {{ .Values.twigex.persistence.storageClass }}
+  {{- end }}

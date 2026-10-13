@@ -1,0 +1,37 @@
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Personal / local config (NOT to ship in OCI tarball)
+.kube/
+.secrets/
+.sops.yaml
+*.local.yaml
+*secrets.yaml
+
+# Test / scratch
+test-results/
+coverage/
+__pycache__/
+
+# OS / file metadata
+.DS_Store
+Thumbs.db
+
+# Documentation build artifacts
+docs/_build/
+
+# Agent / CI files that must not ship in the chart package
+.github/
+AGENTS.md
+SKILL.md
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md
