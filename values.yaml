@@ -41,7 +41,7 @@ ingress:
 
 twigex:
   # ── Image ──
-  # `tag` empty => uses .Chart.AppVersion (currently "0.15.0").
+  # `tag` empty => uses .Chart.AppVersion.
   # Default image is Twigex EE (pre-built, includes enterprise features).
   # For the fully open-source build, build the container from source, push it
   # to your own registry, and point twigex.image.repository at it.

@@ -10,7 +10,7 @@ Twigex is deployed with a Helm chart published as an OCI artifact:
 oci://ghcr.io/twigex/helm-charts/twigex
 ```
 
-No `helm repo add` is needed — it's pulled directly by OCI reference and version tag (e.g. `--version 0.0.36`).
+No `helm repo add` is needed — it's pulled directly by OCI reference;
 
 Stack components (all optional except Twigex + one DB mode + Redis):
 
@@ -65,10 +65,10 @@ Use the mode-specific command from INSTALLATION.md. Always require: `domain`, `t
 
 ### Upgrade
 ```sh
-helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex --version <new-version> \
+helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex -f your-values.yaml
 ```
-Always check the chart's Changelog for breaking changes before bumping versions, especially around the database backend.
+Always check the chart's Changelog for breaking changes before upgrading, especially around the database backend.
 
 ### Verify health
 ```sh

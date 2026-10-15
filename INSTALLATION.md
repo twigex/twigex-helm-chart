@@ -30,7 +30,8 @@ This guide covers installing the Twigex Helm chart and its optional dependencies
 
 - **cert-manager** with a ClusterIssuer (recommended for TLS)
 
-> **Note:** Service addresses (Redis, MariaDB) are auto-derived from the Helm release name — `<release>-redis-master:6379` for Redis and `<release>-mariadb` for MariaDB. With the default release name `twigex`, addresses are `twigex-redis-master:6379` and `twigex-mariadb`. Any release name works — Twigex derives them automatically. If you use a different release name, the app's env vars are auto-derived and should resolve correctly without any extra configuration.
+> [!NOTE]
+> Service addresses (Redis, MariaDB) are auto-derived from the Helm release name — `<release>-redis-master:6379` for Redis and `<release>-mariadb` for MariaDB. With the default release name `twigex`, addresses are `twigex-redis-master:6379` and `twigex-mariadb`. Any release name works — Twigex derives them automatically. If you use a different release name, the app's env vars are auto-derived and should resolve correctly without any extra configuration.
 
 ---
 
@@ -89,7 +90,7 @@ These are required regardless of which MariaDB backend you pick:
 A bundled MariaDB instance is deployed as a single Pod inside the chart. Simplest option, suitable for small/medium deployments.
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -111,7 +112,7 @@ Requirements:
 - An existing `twigex` database (the MySQL identifier — the app expects this DB name) (the chart does **not** create it — create it ahead of time, e.g. `CREATE DATABASE twigex CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`)
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -131,7 +132,7 @@ The Ingress is **disabled by default** — the chart creates no Ingress; the Twi
 **HTTP-only (no TLS):**
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -148,7 +149,7 @@ helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
 Requires a `ClusterIssuer` named `letsencrypt-prod` to already exist in the cluster (create it once per cluster per the cert-manager docs). The chart only adds the annotation — cert-manager creates the Secret on first request to the Ingress.
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -380,7 +381,7 @@ Expected healthy state:
 ## Upgrading
 
 ```sh
-helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex \
   -f your-values.yaml
 ```
@@ -436,7 +437,7 @@ Reference of the most common values exposed by `values.yaml`; the full machine-r
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `twigex.image.repository` | Container image repository. Default is the pre-built EE image with enterprise features; for the fully open-source build, build the container from source, push it to your own registry, and set this value. | string | `ghcr.io/twigex/twigex-ee` |
-| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `0.15.0`). | string | `""` |
+| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion`. | string | `""` |
 
 ### Server
 

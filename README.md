@@ -49,14 +49,15 @@ More info about the project:
 - Helm v3.8.0 or later
 - Kubernetes cluster with a default StorageClass (or create PVs manually)
 
-|> **Note:** Default values are set for a typical Kubernetes installation with the example release name `twigex` (any release name works; addresses are auto-derived). The chart auto-derives Redis (`<release>-redis-master:6379`) and MariaDB (`<release>-mariadb`) addresses from the release name, so a non-default release name works without any extra configuration.
+> [!NOTE]
+> Default values are set for a typical Kubernetes installation with the example release name `twigex` (any release name works; addresses are auto-derived). The chart auto-derives Redis (`<release>-redis-master:6379`) and MariaDB (`<release>-mariadb`) addresses from the release name, so a non-default release name works without any extra configuration.
 
 ## Installing
 
 ### Default (embedded MariaDB)
 
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -97,7 +98,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `twigex.image.repository` | Container image repository. Default is the pre-built EE image with enterprise features; for the fully open-source build, build the container from source, push it to your own registry, and set this value. | string | `ghcr.io/twigex/twigex-ee` |
-| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion` (currently `0.15.0`). | string | `""` |
+| `twigex.image.tag` | Container image tag. Set to `""` (default) to use `Chart.AppVersion`. | string | `""` |
 | `twigex.image.pullPolicy` | Container image pullPolicy | string | `IfNotPresent` |
 
 ### Deployment & Workload

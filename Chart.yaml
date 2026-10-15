@@ -3,7 +3,7 @@ name: twigex
 description: A Helm chart for deploying Twigex — the unified workspace for modern businesses.
 type: application
 version: 0.0.36
-appVersion: "0.15.0"
+appVersion: "0.16.0"
 # Minimum k8s we test against. Bump when using APIs that require newer.
 kubeVersion: ">=1.24.0-0"
 keywords:
@@ -31,7 +31,7 @@ keywords:
 home: https://twigex.com
 icon: https://twigex.com/icon.png
 sources:
-  - https://github.com/twigex/helm-charts
+  - https://github.com/twigex/twigex-helm-chart
 maintainers:
   - name: Twigex
     url: https://twigex.com
@@ -42,7 +42,7 @@ annotations:
     - name: Container image
       url: https://github.com/orgs/twigex/packages/container/package/twigex-ee
     - name: Documentation
-      url: https://twigex.com
+      url: https://twigex.com/docs
   artifacthub.io/changes: |
     - kind: added
       description: first-release

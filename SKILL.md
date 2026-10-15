@@ -33,7 +33,7 @@ For external mode, the user must ensure:
 
 **`mariadb.mode=embedded`** (default):
 ```sh
-helm install twigex oci://ghcr.io/twigex/helm-charts/twigex --version 0.0.36 \
+helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
   --namespace twigex --create-namespace \
   --set domain=example.com \
   --set twigex.admin.password=your_password \
@@ -83,7 +83,7 @@ The twigex pod label is `app=<release>-twigex`; the Twigex app Service is always
 | App can't reach DB/Redis after changing release name | Service addresses are auto-derived from release name | Install with the default release name `twigex` or update all downstream refs to match new `<release>-*` names |
 | Office editing fails to load / WOPI errors | Office server's alias/allow-list doesn't include the Twigex domain, or domain unreachable from browsers | Check `aliasgroup1` (or equivalent) on EuroOffice/Collabora side |
 | Voice/video (Channel) not connecting | LiveKit not installed, or `twigex.channel.host`/key/secret misconfigured | Verify LiveKit server is up and reachable at the configured `ws://` URL |
-| Upgrade breaks DB connectivity | Breaking change in DB backend defaults between chart versions | Read the chart Changelog before bumping `--version` |
+| Upgrade breaks DB connectivity | Breaking change in DB backend defaults between chart versions | Read the chart Changelog before upgrading |
 | Want to rotate `mariadb.password` or `encryptKey` | Not supported live with embedded MariaDB (password) or safely at all (encryptKey — invalidates encrypted data) | Treat both as fixed at install time; changing requires reinit/data migration |
 | PVCs/Secrets still exist after `helm uninstall` | Intentional — `helm.sh/resource-policy: keep` on PVCs and Secrets | Delete manually if a full wipe is wanted: `kubectl delete pvc -n twigex --all` etc. |
 
