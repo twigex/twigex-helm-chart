@@ -17,7 +17,7 @@ body:
     attributes:
       label: Chart version
       description: Version installed (helm list -n <namespace>)
-      placeholder: 0.0.36
+      placeholder: 0.0.37
     validations:
       required: true
   - type: input

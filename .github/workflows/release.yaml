@@ -1,7 +1,7 @@
 name: Release (publish OCI chart)
 
-# Publishes the chart to GHCR when a version tag is pushed (v0.0.36 -> chart
-# version 0.0.36). Chart version and tag must agree; CI fails otherwise.
+# Publishes the chart to GHCR when a version tag is pushed (v0.0.37 -> chart
+# version 0.0.37). Chart version and tag must agree; CI fails otherwise.
 
 on:
   push:
