@@ -18,6 +18,8 @@
 
 # Test / scratch
 test-results/
+rendered.yaml
+packaged/
 coverage/
 __pycache__/
 

@@ -3,7 +3,7 @@
 # Copy to a git-ignored file, fill in CHANGE_ME values, then:
 #
 #   helm install twigex oci://ghcr.io/twigex/helm-charts/twigex \
-#     --version 0.0.36 -n twigex --create-namespace \
+#     -n twigex --create-namespace \
 #     -f values-prod-example.yaml
 #
 # NEVER commit this file with real values filled in. For CI / GitOps use an
