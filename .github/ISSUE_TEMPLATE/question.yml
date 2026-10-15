@@ -20,6 +20,6 @@ body:
     id: chart-version
     attributes:
       label: Chart version
-      placeholder: 0.0.36
+      placeholder: 0.0.37
     validations:
       required: false
