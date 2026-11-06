@@ -115,6 +115,7 @@ When upgrading, please refer to the [Upgrading](#upgrading) section at the botto
 | `twigex.service.loadBalancerIP` | Static LB IP (LoadBalancer only; deprecated upstream since Kubernetes 1.24) | string | `""` |
 | `twigex.service.annotations` | Service annotations | object | `{}` |
 | `twigex.pod.{annotations,labels,nodeSelector, affinity,tolerations,priorityClassName, terminationGracePeriodSeconds,topologySpreadConstraints, securityContext,containerSecurityContext}` | Pod-template customization for the Twigex Deployment | object | see `values.yaml` |
+| `twigex.pod.dataInit.enabled` | Runs a one-time init container (using the Twigex image) that chowns `/app/data` to uid/gid 1000 when upgrading from a pre-non-root version. Leave `false` for fresh installs. | bool | `false` |
 | `twigex.probes.enabled` | Render liveness/readiness probes (TCP socket on `twigex.server.port`) | bool | `true` |
 | `twigex.probes.{liveness,readiness}.*` | Probe tuning (`initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`) | object | see `values.yaml` |
 | `twigex.pdb.enabled` | Create a PodDisruptionBudget for the Twigex Deployment. Default `false`: with `replicas: 1` and `minAvailable: 1` the PDB has zero allowed disruptions and blocks node drains. | bool | `false` |
@@ -222,6 +223,8 @@ When `cube.enabled=true`, the chart deploys cube-api / cube-router / cube-worker
 ### Channel (LiveKit / WebRTC)
 
 The chart configures the Twigex app client side only; the LiveKit server itself is deployed separately. Env vars are gated: `TWIGEX_CHANNEL_{ENABLED,HOST,KEY,SECRET}` are emitted only when `twigex.channel.host` is set; `TWIGEX_CHANNEL_LINK_PREVIEWS` only when `linkPreviews` is true; `TWIGEX_CHANNEL_GIF_*` only when `gif.enabled` is true. Unset = the admin GUI fields stay editable.
+
+> ⚠️ **LiveKit server version.** Twigex app **0.17.0 and newer** require LiveKit server **1.9.10 or newer** (1.13.x recommended). Older Twigex versions (≤ 0.16.0) work with older LiveKit servers. Video calls simply won't connect on LiveKit ≤ 1.9.9 with Twigex ≥ 0.17.0.
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
@@ -419,7 +422,7 @@ spec:
   source:
     repoURL: oci://ghcr.io/twigex/helm-charts
     chart: twigex
-    targetRevision: 0.0.37
+    targetRevision: 0.0.38
     helm:
       releaseName: twigex
       valuesObject:
@@ -459,12 +462,33 @@ spec:
 
 **Notes:**
 - The chart is published publicly on GHCR — no `imagePullSecrets` or repo credentials required. ArgoCD pulls `oci://ghcr.io/twigex/helm-charts/twigex` anonymously.
-- Pin `targetRevision` to a specific chart version (e.g. `0.0.37`) for reproducible deployments. Avoid floating tags like `latest`.
+- Pin `targetRevision` to a specific chart version (e.g. `0.0.38`) for reproducible deployments. Avoid floating tags like `latest`.
 - `domain` is the FQDN used for the app's Site URL, the Ingress host, and the TLS Secret name (resource names like the `<release>-twigex` Deployment derive from the release name). Change it to match your host (e.g. `twigex.example.com`).
 - `ingress.certManagerIssuer` triggers the chart to add the `cert-manager.io/cluster-issuer` annotation. The TLS Secret is created automatically by cert-manager, named after the sanitized `domain` (dots replaced by dashes, e.g. `twigex.example.com` → `twigex-example-com`). Replace `letsencrypt-prod` with your actual ClusterIssuer name (use `letsencrypt-staging` for dev to avoid rate limits).
 - To use your own TLS Secret with any name instead, set `ingress.tlsExistingSecret` (mutually exclusive with `ingress.certManagerIssuer`).
 - `mariadb.password` and `mariadb.rootPassword` are baked into the database on first boot — pick once and don't rotate, or use `mariadb.externalSecret: true` + an external secret manager.
 - The chart ships one nginx annotation by default: `nginx.ingress.kubernetes.io/proxy-body-size: "2048m"`, matching the app's 2048 MB public-upload limit (without it, ingress-nginx defaults to 1 MB and large uploads get 413). Override or remove it via `ingress.annotations` in your values file (set the key to `null` to remove); `ingress.customAnnotations` can add or override keys, but null-removal does not work through it. On non-nginx controllers the annotation is cosmetic noise (Traefik ignores it).
+
+### DataInit
+
+The chart runs the Twigex container as a non-root user (uid/gid 1000). If you are upgrading from a version that ran the container as root, existing files in the `/app/data` volume may still be owned by `root` (uid 0). The kubelet's `fsGroup` can only adjust group permissions; it cannot change file ownership.
+
+To fix this, enable `twigex.pod.dataInit.enabled`:
+
+```yaml
+twigex:
+  pod:
+    dataInit:
+      enabled: true
+```
+
+This adds a short-lived `data-init` init container that:
+- Runs as root (`runAsUser: 0`)
+- Checks the owner of `/app/data`
+- Recursively sets the ownership to `1000:1000` if it doesn't match
+- Exits immediately
+
+Once your PVC data is successfully migrated (verify the app pod is running without permission errors), you can set `twigex.pod.dataInit.enabled` back to `false`.
 
 ### Encrypt Key Generation
 

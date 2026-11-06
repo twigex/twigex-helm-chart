@@ -55,6 +55,23 @@ spec:
       securityContext:
         {{- toYaml .Values.twigex.pod.securityContext | nindent 8 }}
       {{- end }}
+    {{- if .Values.twigex.pod.dataInit.enabled }}
+      initContainers:
+        - name: data-init
+          image: "{{ .Values.twigex.image.repository }}:{{ .Values.twigex.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.twigex.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - '[ "$(stat -c %u /app/data)" = "1000" ] || chown -R 1000:1000 /app/data'
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          volumeMounts:
+            - name: shared-pvc
+              mountPath: /app/data
+    {{- end }}
       terminationGracePeriodSeconds: {{ .Values.twigex.pod.terminationGracePeriodSeconds }}
       containers:
         - name: twigex

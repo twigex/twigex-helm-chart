@@ -83,8 +83,10 @@ The twigex pod label is `app=<release>-twigex`; the Twigex app Service is always
 | App can't reach DB/Redis after changing release name | Service addresses are auto-derived from release name | Install with the default release name `twigex` or update all downstream refs to match new `<release>-*` names |
 | Office editing fails to load / WOPI errors | Office server's alias/allow-list doesn't include the Twigex domain, or domain unreachable from browsers | Check `aliasgroup1` (or equivalent) on EuroOffice/Collabora side |
 | Voice/video (Channel) not connecting | LiveKit not installed, or `twigex.channel.host`/key/secret misconfigured | Verify LiveKit server is up and reachable at the configured `ws://` URL |
+| Video calls won't connect with Twigex app ≥ 0.17.0 | LiveKit server too old (≤ 1.9.9) | Upgrade LiveKit server to ≥ 1.9.10 (1.13.x recommended) |
 | Upgrade breaks DB connectivity | Breaking change in DB backend defaults between chart versions | Read the chart Changelog before upgrading |
 | Want to rotate `mariadb.password` or `encryptKey` | Not supported live with embedded MariaDB (password) or safely at all (encryptKey — invalidates encrypted data) | Treat both as fixed at install time; changing requires reinit/data migration |
+| Twigex pod crashloops with `Permission denied` on `/app/data` after upgrading to a non-root chart | Volume skips kubelet fsGroup ownership management (e.g. NFS), or a root-pod rollback left new root-owned files (OnRootMismatch skips the walk); local/block storage with default `fsGroup: 1000` is fixed automatically | Enable `twigex.pod.dataInit.enabled=true` for one upgrade cycle to chown `/app/data` to 1000:1000, then disable it |
 | PVCs/Secrets still exist after `helm uninstall` | Intentional — `helm.sh/resource-policy: keep` on PVCs and Secrets | Delete manually if a full wipe is wanted: `kubectl delete pvc -n twigex --all` etc. |
 
 ## Full configuration reference
