@@ -42,6 +42,8 @@ spec:
               value: "{{ .Release.Name }}-cube-worker-1:9001"
             - name: CUBESTORE_REMOTE_DIR
               value: "/cube/data"
+            - name: CUBESTORE_LOCAL_DIR
+              value: "/cube/localdata"
           ports:
             - containerPort: 9001
           resources:
@@ -49,8 +51,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /cube/data
+            - name: localdata
+              mountPath: /cube/localdata
       volumes:
         - name: data
+          emptyDir: {}
+        - name: localdata
           emptyDir: {}
 ---
 apiVersion: v1

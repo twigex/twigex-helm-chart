@@ -2,8 +2,8 @@ apiVersion: v2
 name: twigex
 description: A Helm chart for deploying Twigex — the unified workspace for modern businesses.
 type: application
-version: 0.0.37
-appVersion: "0.16.0"
+version: 0.0.38
+appVersion: "0.17.0"
 # Minimum k8s we test against. Bump when using APIs that require newer.
 kubeVersion: ">=1.24.0-0"
 keywords:
@@ -29,7 +29,7 @@ keywords:
   - kubernetes
   - helm
 home: https://twigex.com
-icon: https://twigex.com/icon.png
+icon: https://resources.twigex.com/twigex/logo/twigex-logo.png
 sources:
   - https://github.com/twigex/twigex-helm-chart
 maintainers:

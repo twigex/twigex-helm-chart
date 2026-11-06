@@ -390,6 +390,39 @@ helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex \
 
 ---
 
+### Upgrading from pre-non-root versions (dataInit)
+
+Since chart version `0.0.38`, the Twigex pod runs as a non-root user (`uid: 1000`). Older deployments ran as root, so files on the PVC may be owned by `root:root`.
+
+On storage where the kubelet applies `fsGroup` ownership management (local/block volumes — the common case), the chart's default `fsGroup: 1000` fixes this automatically: on mount the kubelet recursively sets group `1000` on all files and adds group-write bits, so existing root-owned files become writable for the non-root pod. No action is needed for these upgrades.
+
+Enable the built-in migration tool **only** when the volume does not apply the `fsGroup` fix — typically NFS or other volumes without fsGroup ownership management — or after a rollback to a root pod left new `root:root` files on the PVC (with the default `fsGroupChangePolicy: OnRootMismatch` the kubelet then skips the recursive fix, because the volume root already matches `fsGroup`):
+
+```sh
+helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex \
+  --namespace twigex \
+  -f your-values.yaml \
+  --set twigex.pod.dataInit.enabled=true
+```
+
+Or in `values.yaml`:
+
+```yaml
+twigex:
+  pod:
+    dataInit:
+      enabled: true
+```
+
+This mounts the PVC under a temporary root-privileged init container (`data-init`) that recursively changes ownership to `1000:1000`. **Disable it after the first successful boot** to keep the pod running with minimal privileges:
+
+```sh
+helm upgrade twigex oci://ghcr.io/twigex/helm-charts/twigex \
+  --namespace twigex \
+  -f your-values.yaml \
+  --set twigex.pod.dataInit.enabled=false
+```
+
 ## Uninstalling
 
 ```sh

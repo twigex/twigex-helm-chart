@@ -220,10 +220,36 @@ twigex:
     priorityClassName: ""
     terminationGracePeriodSeconds: 60
     topologySpreadConstraints: []
-    # Empty / omitted by default; templates gate on truthiness.
-    # Set to a non-empty map to apply.
-    securityContext: null
-    containerSecurityContext: null
+    # Non-root by default: the twigex image runs as uid/gid 1000 (user
+    # "twigex") and local storage lives under /app/data, so the pod must
+    # run as 1000 and the data PVC needs fsGroup=1000 for write access.
+    # Set to a non-empty map to override; templates gate on truthiness.
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    # Opt-in migration aid for upgrades from pre-non-root chart versions
+    # (app <= 0.16 pods ran as root, so /app/data may hold root:root files).
+    # On volumes with kubelet fsGroup ownership management (local/block
+    # storage) the default fsGroup=1000 pass already sets group 1000 and
+    # group-write bits on root-owned files — dataInit is unnecessary there.
+    # Enable it only for volumes that skip fsGroup ownership management
+    # (e.g. NFS), or after a root-pod rollback left new root-owned files
+    # under a volume root that already matches fsGroup (OnRootMismatch then
+    # skips the recursive fix). A root-running init container chowns
+    # /app/data to 1000:1000 once, then exits. Leave disabled on fresh
+    # installs.
+    dataInit:
+      enabled: false
 
   # ── Workload sizing ──
   resources:
