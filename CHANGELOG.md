@@ -4,6 +4,12 @@ All notable changes to this chart are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com) and the chart follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.0.40] - 2026-11-20
+
+### Changed
+
+- Bundled app image updated to 0.17.3.
+
 ## [0.0.39] - 2026-11-11
 
 ### Changed
